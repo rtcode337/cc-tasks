@@ -1,0 +1,34 @@
+# 本番用。TLS 終端はこの手前のリバースプロキシの責務 (仕様書 §3, §6.3)
+services:
+  cctasks:
+    build: .
+    image: cc-tasks:0.1.0
+    container_name: cc-tasks
+    restart: unless-stopped
+    ports:
+      # プロキシからのみ届けばよいのでループバックに閉じる
+      - "127.0.0.1:8930:8930"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID を .env に設定してください}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET を .env に設定してください}
+      ALLOWED_EMAIL: ${ALLOWED_EMAIL:?ログインを許可するメールアドレスを .env に設定してください}
+      MCP_API_KEY: ${MCP_API_KEY:?MCP 用 API キーを .env に設定してください}
+      # 任意。サーバーの OAuth は未設定でもリクエスト(X-Forwarded-Proto/Host)から
+      # リダイレクトを自動導出する。プロキシがそれらを送らない/固定したい場合のみ設定。
+      # ※ .mcp.json の接続先 ${PUBLIC_BASE_URL}/mcp はクライアント側のシェル環境変数で
+      #    展開されるもので、サーバーのこの値とは別物(必須ではない)。
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      DB_PATH: /data/cctasks.db
+      TZ: Asia/Tokyo
+    volumes:
+      - cctasks-data:/data
+    # 非力なサーバー前提。JVM 側は MaxRAMPercentage でこの上限に追従する
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cctasks-data:

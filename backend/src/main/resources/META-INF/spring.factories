@@ -1,0 +1,2 @@
+org.springframework.data.jdbc.core.dialect.DialectResolver$JdbcDialectProvider=dev.cctasks.config.SqliteDialectProvider
+org.springframework.boot.env.EnvironmentPostProcessor=dev.cctasks.config.GoogleOAuthEnvironmentPostProcessor

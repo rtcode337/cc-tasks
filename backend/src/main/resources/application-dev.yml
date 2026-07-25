@@ -1,0 +1,21 @@
+# ローカル開発用 (M1/M2)。認証を通さずに REST/MCP を叩けるようにする。
+# 本番でこのプロファイルを有効にしないこと。
+spring:
+  datasource:
+    url: jdbc:sqlite:${DB_PATH:./data/cctasks.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+
+server:
+  servlet:
+    session:
+      cookie:
+        # ローカルは HTTP なので Secure を外さないとセッションが載らない
+        secure: false
+
+cctasks:
+  # dev では MCP も固定キーで検証できるようにしておく (LAN 内前提)
+  mcp-api-key: ${MCP_API_KEY:dev-local-key}
+
+logging:
+  level:
+    dev.cctasks: DEBUG
+    org.springframework.jdbc.core: DEBUG

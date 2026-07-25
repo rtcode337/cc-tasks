@@ -1,0 +1,18 @@
+# ビルド成果物
+backend/build/
+backend/.gradle/
+frontend/dist/
+frontend/node_modules/
+# Vue のビルド結果を同梱する場所 (Docker ビルド時に生成)
+backend/src/main/resources/static/
+
+# ローカルの SQLite
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+
+# 秘密情報
+.env
+
+.DS_Store

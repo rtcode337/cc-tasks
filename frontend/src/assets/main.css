@@ -1,0 +1,144 @@
+/* モバイルファースト。主用途は出先のスマホ入力 (仕様書 §8) */
+
+/* 明るいテーマがデフォルト。暗いテーマは <html data-theme="dark"> で切り替える。
+   コンポーネントはすべてこの変数を参照するので、ここだけで両テーマを賄う。 */
+:root,
+:root[data-theme='light'] {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #dce2ea;
+  --text: #1b232c;
+  --muted: #5b6b7a;
+  --muted-dim: #94a1af;
+  --accent: #1478c8;
+  --accent-text: #ffffff;
+  --danger: #d92d20;
+  --danger-bg: #fdecea;
+  --warn: #8a5a00;
+  --warn-bg: #fdf4d6;
+  --code-bg: #f0f3f7;
+
+  --badge-todo-bg: #e4e9f0;
+  --badge-todo-text: #48566a;
+  --badge-inprogress-bg: #fdf0cf;
+  --badge-inprogress-text: #8a5a00;
+  --badge-done-bg: #d8f5e2;
+  --badge-done-text: #1a7a3f;
+
+  --overlay: rgba(27, 35, 44, 0.4);
+}
+
+:root[data-theme='dark'] {
+  --bg: #12181f;
+  --surface: #1a222c;
+  --surface-raised: #212b37;
+  --border: #2c3846;
+  --text: #e6edf3;
+  --muted: #9aa8b6;
+  --muted-dim: #6b7a8a;
+  --accent: #5ec8f8;
+  --accent-text: #06121f;
+  --danger: #f87171;
+  --danger-bg: #3a1d1d;
+  --warn: #fbbf24;
+  --warn-bg: #3a2f14;
+  --code-bg: #0e141b;
+
+  --badge-todo-bg: #2b3440;
+  --badge-todo-text: #cbd5e1;
+  --badge-inprogress-bg: #3b2f12;
+  --badge-inprogress-text: #fbbf24;
+  --badge-done-bg: #12321f;
+  --badge-done-text: #4ade80;
+
+  --overlay: rgba(4, 8, 12, 0.7);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Hiragino Kaku Gothic ProN',
+    'Noto Sans JP',
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  /* テーマ切り替えを滑らかに */
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+a {
+  color: var(--accent);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  /* 16px 未満だと iOS がフォーカス時にズームする */
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.button {
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.button--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.button--danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}

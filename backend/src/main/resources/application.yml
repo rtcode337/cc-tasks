@@ -1,0 +1,98 @@
+spring:
+  application:
+    name: cc-tasks
+
+  datasource:
+    # SQLite はファイル 1 個。foreign_keys は接続ごとに ON にしないと効かない。
+    # WAL + busy_timeout で「読み中に書けない」系のロック衝突を緩和する。
+    url: jdbc:sqlite:${DB_PATH:./data/cctasks.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      # SQLite の書き込みは事実上 1 本。プールを広げても意味が無いので絞る。
+      maximum-pool-size: 4
+      pool-name: cctasks-pool
+
+  sql:
+    init:
+      mode: always
+      continue-on-error: false
+
+  # Google の ClientRegistration は GoogleOAuthEnvironmentPostProcessor が
+  # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET から組み立てる。
+  # (空文字を置くと Spring Boot の検証で落ちるため、ここには書かない)
+
+  ai:
+    mcp:
+      server:
+        enabled: true
+        name: cc-tasks
+        version: 0.1.0
+        instructions: >
+          Claude Code に依頼するタスクの待ち行列。作業を始める前に list_tasks で
+          対象プロジェクトの残タスクを確認し、get_task で詳細をプロンプトとして取得する。
+          着手時と完了時に update_task_status を呼び、セッションを終える前に必ず
+          add_note で進捗と引き継ぎ事項を書き戻すこと。
+        protocol: STREAMABLE
+        # SSE / stdio は使わない(仕様書 §4)
+        streamable-http:
+          mcp-endpoint: /mcp
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:8930}
+  # native (Tomcat の RemoteIpValve) を使う。コネクタレベルで X-Forwarded-*
+  # を解釈するため、Tomcat 自身が request.isSecure()/scheme/host を正しく認識する。
+  # → セッション Cookie の Secure 自動付与も、OAuth リダイレクト URI の {baseUrl}
+  #   導出も、PUBLIC_BASE_URL 無しで正しく効く。
+  # framework (Spring のフィルタ) はリクエストをラップするだけで Tomcat の
+  # セッション Cookie 発行には効かないため、ここでは使わない。
+  forward-headers-strategy: native
+  error:
+    whitelabel:
+      enabled: false
+  shutdown: graceful
+  servlet:
+    session:
+      # 再起動・再デプロイでログインが切れないよう、セッションをディスクに永続化する。
+      # store-dir をボリューム(/data)配下にすればコンテナ再作成でも残る。
+      # devtools の自動再起動でもログインが維持される。
+      persistent: true
+      store-dir: ${SESSION_DIR:./data/sessions}
+      # 自分専用なので長め。ここまで無操作が続いたら失効
+      timeout: 30d
+      cookie:
+        name: CCTASKSSESSION
+        http-only: true
+        same-site: lax
+        # secure はあえて指定しない。未指定だと Tomcat がリクエストのスキーマ
+        # (ForwardedHeaderFilter 適用後の isSecure) を見て自動で付ける。
+        # → https 本番では Secure、http ローカルでは非 Secure になり、
+        #   PUBLIC_BASE_URL を設定しなくてもログインが成立する。
+        # CSRF Cookie (CookieCsrfTokenRepository) が既にこの挙動なので揃える。
+
+cctasks:
+  # ログインを許可する Google アカウント (1 件のみ)
+  allowed-email: ${ALLOWED_EMAIL:}
+  # MCP 用の静的 API キー
+  mcp-api-key: ${MCP_API_KEY:}
+  # 公開 URL。OAuth リダイレクト構築に使う (リバースプロキシ配下での絶対 URL)
+  public-base-url: ${PUBLIC_BASE_URL:}
+  rate-limit:
+    # 認証系エンドポイントに対する IP あたりの毎分許容リクエスト数
+    requests-per-minute: 20
+
+logging:
+  level:
+    root: INFO
+    dev.cctasks: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"
+
+# Actuator は依存に含めていない (仕様書 §6.3: 管理系エンドポイントは公開しない)
