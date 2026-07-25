@@ -185,3 +185,7 @@ JSON は camelCase。リクエストは snake_case (`acceptance_criteria` 等) �
 cd backend  && ./gradlew test      # SQLite の型変換 / MCP の Markdown 整形 / API キー認証
 cd frontend && npm run typecheck
 ```
+
+## ライセンス
+
+[MIT License](LICENSE)
