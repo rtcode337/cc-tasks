@@ -28,12 +28,10 @@ jobs:
         include:
           - platform: linux/amd64
             runner: ubuntu-latest
-          # arm64 も出す場合は以下を有効化する。
-          # ただし無料の ubuntu-24.04-arm ランナーは public リポジトリ限定なので、
-          # 非公開の間はコメントのままにしておく(公開後に有効化すれば travel-log と同じ
-          # amd64/arm64 マルチアーキになる)。
-          # - platform: linux/arm64
-          #   runner: ubuntu-24.04-arm
+          # arm64 はネイティブの arm ランナーでビルドする。
+          # 無料の ubuntu-24.04-arm ランナーは public リポジトリ限定。
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
