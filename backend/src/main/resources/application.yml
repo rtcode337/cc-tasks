@@ -54,6 +54,13 @@ server:
   # framework (Spring のフィルタ) はリクエストをラップするだけで Tomcat の
   # セッション Cookie 発行には効かないため、ここでは使わない。
   forward-headers-strategy: native
+  tomcat:
+    # リダイレクトの Location を相対 URL のまま返す。
+    # native の RemoteIpValve は X-Forwarded-Port 欠落時にポートを 443 に固定するため、
+    # sendRedirect("/") を絶対 URL に展開するとポートが落ちる(非標準ポート公開で
+    # ログイン成功後に http?://host/ ← ポート無しへ飛ぶ)。相対のままにすればブラウザが
+    # 現在の host:port を基準に解決するのでポートが保たれる。既定は false。
+    use-relative-redirects: true
   error:
     whitelabel:
       enabled: false
