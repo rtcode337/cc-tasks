@@ -32,27 +32,28 @@ public final class Dtos {
     public record ProjectResponse(
             Long id,
             String name,
-            String repoUrl,
+            List<String> repoUrls,
             String description,
             boolean archived,
             Instant createdAt,
             Instant updatedAt) {
 
         public static ProjectResponse from(Project p) {
-            return new ProjectResponse(p.id(), p.name(), p.repoUrl(), p.description(),
+            return new ProjectResponse(p.id(), p.name(), p.repoUrlList(), p.description(),
                     p.archived(), p.createdAt(), p.updatedAt());
         }
     }
 
     public record CreateProjectRequest(
             @NotBlank(message = "は必須です") String name,
-            @JsonAlias("repo_url") String repoUrl,
+            @JsonAlias("repo_urls") List<String> repoUrls,
             String description) {
     }
 
+    /** repoUrls は null で「変更しない」、空配列で「全部消す」。 */
     public record UpdateProjectRequest(
             String name,
-            @JsonAlias("repo_url") String repoUrl,
+            @JsonAlias("repo_urls") List<String> repoUrls,
             String description,
             Boolean archived) {
     }

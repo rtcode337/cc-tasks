@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS projects (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT    NOT NULL UNIQUE,          -- 表示名 (例: "sample-project")
-    repo_url    TEXT,                             -- GitHub URL (Web版CC連携で使用)
+    repo_url    TEXT,                             -- リポジトリ URL (複数可・改行区切り。Web版CC連携で使用)
     description TEXT,
     archived    INTEGER NOT NULL DEFAULT 0,       -- 0/1
     created_at  TEXT    NOT NULL,                 -- ISO 8601 (UTC)

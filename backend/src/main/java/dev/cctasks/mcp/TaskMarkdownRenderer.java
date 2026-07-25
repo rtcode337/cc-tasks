@@ -27,8 +27,9 @@ public class TaskMarkdownRenderer {
         md.append("# タスク #").append(task.id()).append(": ").append(task.title()).append("\n\n");
         if (detail.project() != null) {
             md.append("- プロジェクト: ").append(detail.project().name());
-            if (StringUtils.hasText(detail.project().repoUrl())) {
-                md.append(" (").append(detail.project().repoUrl()).append(")");
+            var repoUrls = detail.project().repoUrlList();
+            if (!repoUrls.isEmpty()) {
+                md.append(" (").append(String.join(", ", repoUrls)).append(")");
             }
             md.append("\n");
         }

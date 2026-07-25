@@ -41,7 +41,7 @@ public class ProjectController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProjectResponse create(@Valid @RequestBody CreateProjectRequest request) {
-        Project created = projectService.create(request.name(), request.repoUrl(), request.description());
+        Project created = projectService.create(request.name(), request.repoUrls(), request.description());
         return ProjectResponse.from(created);
     }
 

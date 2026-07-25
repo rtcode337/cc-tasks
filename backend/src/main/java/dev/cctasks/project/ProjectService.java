@@ -44,12 +44,12 @@ public class ProjectService {
     }
 
     @Transactional
-    public Project create(String name, String repoUrl, String description) {
+    public Project create(String name, List<String> repoUrls, String description) {
         String trimmedName = requireName(name);
         requireNameAvailable(trimmedName, null);
         Instant now = now();
         try {
-            return repository.save(new Project(null, trimmedName, blankToNull(repoUrl),
+            return repository.save(new Project(null, trimmedName, joinRepoUrls(repoUrls),
                     blankToNull(description), false, now, now));
         }
         catch (DuplicateKeyException ex) {
@@ -59,9 +59,10 @@ public class ProjectService {
 
     /**
      * null のフィールドは「変更しない」を意味する部分更新。
+     * repoUrls は空リストで「全部消す」。
      */
     @Transactional
-    public Project update(long id, String name, String repoUrl, String description, Boolean archived) {
+    public Project update(long id, String name, List<String> repoUrls, String description, Boolean archived) {
         Project current = requireById(id);
         if (name != null) {
             requireNameAvailable(requireName(name), current.id());
@@ -69,7 +70,7 @@ public class ProjectService {
         Project updated = new Project(
                 current.id(),
                 name != null ? requireName(name) : current.name(),
-                repoUrl != null ? blankToNull(repoUrl) : current.repoUrl(),
+                repoUrls != null ? joinRepoUrls(repoUrls) : current.repoUrls(),
                 description != null ? blankToNull(description) : current.description(),
                 archived != null ? archived : current.archived(),
                 current.createdAt(),
@@ -100,6 +101,19 @@ public class ProjectService {
 
     private static String blankToNull(String value) {
         return StringUtils.hasText(value) ? value : null;
+    }
+
+    /** URL リストを DB 保存用の改行区切りに畳む。空要素は捨て、重複は先勝ち。null・空なら null。 */
+    private static String joinRepoUrls(List<String> urls) {
+        if (urls == null) {
+            return null;
+        }
+        List<String> cleaned = urls.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+        return cleaned.isEmpty() ? null : String.join("\n", cleaned);
     }
 
     private Instant now() {

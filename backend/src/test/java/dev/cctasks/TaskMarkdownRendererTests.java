@@ -71,6 +71,19 @@ class TaskMarkdownRendererTests {
         assertThat(markdown).contains("- [2026-07-19 claude_code] 1 行目\n  2 行目");
     }
 
+    @Test
+    void 複数のリポジトリURLはカンマ区切りで並ぶ() {
+        Project project = new Project(1L, "multi-repo",
+                "https://github.com/example/app\nhttps://github.com/example/infra",
+                null, false, T1, T1);
+        String markdown = renderer.render(new TaskDetail(
+                new Task(1L, 1L, "タスク", null, null, null, TaskStatus.TODO, T1, T1),
+                project, List.of()));
+
+        assertThat(markdown).contains(
+                "- プロジェクト: multi-repo (https://github.com/example/app, https://github.com/example/infra)");
+    }
+
     private static TaskDetail detail(Task task, List<Note> notes) {
         Project project = new Project(1L, "sample-project", "https://github.com/example/sample-project",
                 null, false, T1, T1);

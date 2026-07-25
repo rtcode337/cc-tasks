@@ -11,7 +11,7 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 export interface Project {
   id: number
   name: string
-  repoUrl?: string | null
+  repoUrls: string[]
   description?: string | null
   archived: boolean
   createdAt: string
@@ -68,7 +68,8 @@ export interface TaskInput {
 
 export interface ProjectInput {
   name?: string
-  repoUrl?: string | null
+  /** undefined = 変更しない、空配列 = 全部消す */
+  repoUrls?: string[]
   description?: string | null
   archived?: boolean
 }

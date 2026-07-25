@@ -12,7 +12,7 @@ const saving = ref(false)
 /** null = 新規作成 */
 const editing = ref<Project | null>(null)
 const modalOpen = ref(false)
-const form = reactive({ name: '', repoUrl: '', description: '', archived: false })
+const form = reactive({ name: '', repoUrls: [''], description: '', archived: false })
 
 onMounted(async () => {
   try {
@@ -24,7 +24,7 @@ onMounted(async () => {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { name: '', repoUrl: '', description: '', archived: false })
+  Object.assign(form, { name: '', repoUrls: [''], description: '', archived: false })
   modalOpen.value = true
 }
 
@@ -32,11 +32,37 @@ function openEdit(project: Project) {
   editing.value = project
   Object.assign(form, {
     name: project.name,
-    repoUrl: project.repoUrl ?? '',
+    repoUrls: project.repoUrls.length > 0 ? [...project.repoUrls] : [''],
     description: project.description ?? '',
     archived: project.archived,
   })
   modalOpen.value = true
+}
+
+function addRepoUrl() {
+  form.repoUrls.push('')
+}
+
+function removeRepoUrl(index: number) {
+  form.repoUrls.splice(index, 1)
+  if (form.repoUrls.length === 0) form.repoUrls.push('')
+}
+
+/** URL の末尾 user/repo 形からリポジトリ名を取り出す。取れなければ空文字。 */
+function repoNameFromUrl(url: string): string {
+  const trimmed = url
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '')
+  const match = trimmed.match(/[/:]([^/:]+)\/([^/:]+)$/)
+  return match ? match[2] : ''
+}
+
+/** 最初の URL を入れ終えたとき、名前が空ならリポジトリ名を自動セットする */
+function onFirstRepoUrlChange() {
+  if (form.name.trim()) return
+  const name = repoNameFromUrl(form.repoUrls[0] ?? '')
+  if (name) form.name = name
 }
 
 async function save() {
@@ -46,7 +72,7 @@ async function save() {
   try {
     const payload = {
       name: form.name.trim(),
-      repoUrl: form.repoUrl,
+      repoUrls: form.repoUrls.map((u) => u.trim()).filter((u) => u !== ''),
       description: form.description,
       archived: form.archived,
     }
@@ -84,7 +110,7 @@ async function save() {
           <span class="row__main">
             <span class="row__name">{{ project.name }}</span>
             <span v-if="project.description" class="row__desc">{{ project.description }}</span>
-            <span v-if="project.repoUrl" class="row__repo">{{ project.repoUrl }}</span>
+            <span v-for="url in project.repoUrls" :key="url" class="row__repo">{{ url }}</span>
           </span>
           <span v-if="project.archived" class="row__archived">アーカイブ</span>
         </button>
@@ -95,15 +121,33 @@ async function save() {
       <form class="modal__panel" @submit.prevent="save">
         <h2 class="modal__title">{{ editing ? 'プロジェクトを編集' : '新しいプロジェクト' }}</h2>
 
+        <div class="field">
+          <span class="field__label">リポジトリ URL</span>
+          <span class="field__hint">複数登録できる。最初の URL から名前を自動入力する</span>
+          <div v-for="(_, i) in form.repoUrls" :key="i" class="repo-row">
+            <input
+              v-model="form.repoUrls[i]"
+              type="url"
+              placeholder="https://github.com/..."
+              @change="i === 0 && onFirstRepoUrlChange()"
+            />
+            <button
+              v-if="form.repoUrls.length > 1 || form.repoUrls[0] !== ''"
+              type="button"
+              class="repo-row__remove"
+              aria-label="この URL を削除"
+              @click="removeRepoUrl(i)"
+            >
+              ×
+            </button>
+          </div>
+          <button type="button" class="repo-add" @click="addRepoUrl">＋ URL を追加</button>
+        </div>
+
         <label class="field">
           <span class="field__label">名前<span class="field__required">必須</span></span>
           <span class="field__hint">MCP の list_tasks で指定する名前。リポジトリ名に揃えると迷わない</span>
           <input v-model="form.name" type="text" required placeholder="sample-project" />
-        </label>
-
-        <label class="field">
-          <span class="field__label">リポジトリ URL</span>
-          <input v-model="form.repoUrl" type="url" placeholder="https://github.com/..." />
         </label>
 
         <label class="field">
@@ -260,6 +304,42 @@ async function save() {
 .field__hint {
   font-size: 0.75rem;
   color: var(--muted-dim);
+}
+
+.repo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.repo-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-row__remove {
+  background: none;
+  border: none;
+  color: var(--muted-dim);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.repo-row__remove:hover {
+  color: var(--danger);
+}
+
+.repo-add {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
 }
 
 .checkbox {

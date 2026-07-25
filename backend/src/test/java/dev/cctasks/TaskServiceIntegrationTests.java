@@ -178,6 +178,30 @@ class TaskServiceIntegrationTests {
     }
 
     @Test
+    void リポジトリURLは複数持て改行区切りで保存される() {
+        Project project = projectService.create("multi-repo",
+                java.util.List.of(" https://github.com/example/app ", "", "https://github.com/example/infra",
+                        "https://github.com/example/app"),
+                null);
+
+        // trim・空要素除去・重複除去(先勝ち)される
+        assertThat(project.repoUrlList()).containsExactly(
+                "https://github.com/example/app", "https://github.com/example/infra");
+        assertThat(jdbc.queryForObject("SELECT repo_url FROM projects WHERE id = ?", String.class, project.id()))
+                .isEqualTo("https://github.com/example/app\nhttps://github.com/example/infra");
+
+        // null は「変更しない」
+        Project untouched = projectService.update(project.id(), null, null, "説明だけ更新", null);
+        assertThat(untouched.repoUrlList()).hasSize(2);
+
+        // 空リストは「全部消す」
+        Project cleared = projectService.update(project.id(), null, java.util.List.of(), null, null);
+        assertThat(cleared.repoUrlList()).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT repo_url FROM projects WHERE id = ?", String.class, project.id()))
+                .isNull();
+    }
+
+    @Test
     void プロジェクト無しでタスクを作成し後から紐づけできる() {
         Task memo = taskService.create(null, "出先で思いついたメモ", null, null, null, null);
         assertThat(memo.projectId()).isNull();

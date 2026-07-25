@@ -166,7 +166,7 @@ export CC_TASKS_API_KEY=$(grep '^MCP_API_KEY=' .env | cut -d= -f2-)
 | GET | `/api/me` | ログイン中ユーザー |
 | GET | `/api/projects` | プロジェクト一覧 (`?archived=false` が既定、`?archived=` で全件) |
 | POST | `/api/projects` | 作成 |
-| PATCH | `/api/projects/{id}` | 更新 (name, repoUrl, description, archived) |
+| PATCH | `/api/projects/{id}` | 更新 (name, repoUrls, description, archived)。repoUrls は配列(空配列で全消し) |
 | GET | `/api/tasks` | 一覧 (`?projectId=&status=`) |
 | POST | `/api/tasks` | 作成 (projectId は任意) |
 | GET | `/api/tasks?done=false` | 未完了(done 以外)一覧 |
