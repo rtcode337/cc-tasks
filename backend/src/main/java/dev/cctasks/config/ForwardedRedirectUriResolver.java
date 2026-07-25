@@ -1,6 +1,13 @@
 package dev.cctasks.config;
 
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.stream.Collectors;
+
 import jakarta.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
@@ -27,6 +34,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  * その絶対 URL になっている(= 設定を尊重する)ので、この書き換えは行わない。
  */
 public class ForwardedRedirectUriResolver implements OAuth2AuthorizationRequestResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(ForwardedRedirectUriResolver.class);
 
     private final DefaultOAuth2AuthorizationRequestResolver delegate;
     private final boolean publicBaseUrlConfigured;
@@ -56,6 +65,7 @@ public class ForwardedRedirectUriResolver implements OAuth2AuthorizationRequestR
      */
     private OAuth2AuthorizationRequest rewrite(OAuth2AuthorizationRequest authorizationRequest,
             HttpServletRequest request) {
+        logForwardingDiagnostics(request, authorizationRequest);
         if (authorizationRequest == null || publicBaseUrlConfigured) {
             return authorizationRequest;
         }
@@ -76,6 +86,31 @@ public class ForwardedRedirectUriResolver implements OAuth2AuthorizationRequestR
         return OAuth2AuthorizationRequest.from(authorizationRequest)
                 .redirectUri(redirectUri)
                 .build();
+    }
+
+    /**
+     * 【一時的な診断ログ】本番プロキシが実際にどんなヘッダを送ってくるかを可視化する。
+     * ポート欠落の原因を切り分けたら削除する。
+     */
+    private void logForwardingDiagnostics(HttpServletRequest request, OAuth2AuthorizationRequest built) {
+        if (!log.isInfoEnabled()) {
+            return;
+        }
+        String allHeaders;
+        Enumeration<String> names = request.getHeaderNames();
+        allHeaders = (names == null ? Collections.<String>emptyList() : Collections.list(names)).stream()
+                .filter(n -> {
+                    String lower = n.toLowerCase();
+                    return lower.startsWith("x-forwarded") || lower.equals("host") || lower.equals("forwarded")
+                            || lower.startsWith("x-real");
+                })
+                .map(n -> n + "=" + request.getHeader(n))
+                .collect(Collectors.joining(", "));
+        log.info("[oauth-redirect-diag] remoteAddr={} scheme={} serverName={} serverPort={} requestURL={} "
+                        + "publicBaseUrlConfigured={} builtRedirectUri={} fwdHeaders=[{}]",
+                request.getRemoteAddr(), request.getScheme(), request.getServerName(), request.getServerPort(),
+                request.getRequestURL(), publicBaseUrlConfigured,
+                built == null ? "<null>" : built.getRedirectUri(), allHeaders);
     }
 
     /**
