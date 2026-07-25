@@ -24,7 +24,7 @@ REST(`dev.cctasks.web`)と MCP(`dev.cctasks.mcp`)は **サービス層を共有�
 
 ```bash
 cd backend
-./gradlew bootRun --args='--spring.profiles.active=dev'   # :8930
+./gradlew bootRun --args='--spring.profiles.active=dev'   # :7000
 ./gradlew test
 ```
 
@@ -36,7 +36,7 @@ cd backend
 ```bash
 cd frontend
 npm install
-npm run dev       # :8931 → /api と /mcp を :8930 にプロキシ
+npm run dev       # :8931 → /api と /mcp を :7000 にプロキシ
 npm run build     # vue-tsc の型チェック込み
 ```
 

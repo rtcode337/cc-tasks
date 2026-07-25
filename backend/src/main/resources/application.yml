@@ -46,7 +46,7 @@ spring:
     default-property-inclusion: non_null
 
 server:
-  port: ${PORT:8930}
+  port: ${PORT:7000}
   # native (Tomcat の RemoteIpValve) を使う。コネクタレベルで X-Forwarded-*
   # を解釈するため、Tomcat 自身が request.isSecure()/scheme/host を正しく認識する。
   # → セッション Cookie の Secure 自動付与も、OAuth リダイレクト URI の {baseUrl}

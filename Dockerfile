@@ -40,11 +40,11 @@ USER app
 
 ENV DB_PATH=/data/cctasks.db \
     SESSION_DIR=/data/sessions \
-    PORT=8930 \
+    PORT=7000 \
     # 非力な本番サーバー向け (仕様書 §9)。コンテナのメモリ上限に対する割合で決める
     JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
 
-EXPOSE 8930
+EXPOSE 7000
 VOLUME ["/data"]
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

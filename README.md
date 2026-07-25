@@ -64,11 +64,11 @@ backend(dev プロファイル / **認証なし**)+ 継続コンパイル + フ�
 個別に起動する場合:
 
 ```bash
-# backend (:8930)。継続コンパイルを別ターミナルで回すと保存時に自動再起動する
+# backend (:7000)。継続コンパイルを別ターミナルで回すと保存時に自動再起動する
 cd backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
 cd backend && ./gradlew -t classes          # 別ターミナル
 
-# frontend (:8931)。/api と /mcp を :8930 にプロキシ
+# frontend (:8931)。/api と /mcp を :7000 にプロキシ
 cd frontend && npm install && npm run dev
 ```
 
@@ -93,7 +93,7 @@ echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 docker compose pull && docker compose up -d
 ```
 
-- `compose.yaml` は `127.0.0.1:8930` にだけ公開する。HTTPS 終端と外部公開は手前のリバースプロキシの責務
+- `compose.yaml` は `127.0.0.1:7000` にだけ公開する。HTTPS 終端と外部公開は手前のリバースプロキシの責務
 - タグは `latest` と `sha-xxxxxxx`。切り戻しは `CCTASKS_IMAGE=ghcr.io/rtcode337/cc-tasks:sha-xxxxxxx docker compose up -d`
 - データ(SQLite・セッション)は名前付きボリューム `cctasks-data` に残るので、pull・再作成しても消えない
 

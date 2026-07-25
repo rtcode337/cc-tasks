@@ -40,7 +40,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-echo "▶ backend  : http://localhost:8930 (dev / 認証なし / 自動再起動)"
+echo "▶ backend  : http://localhost:7000 (dev / 認証なし / 自動再起動)"
 echo "▶ frontend : http://localhost:8931 (HMR) ← ブラウザで開くのはこちら"
 echo "  Ctrl-C で全部停止"
 echo

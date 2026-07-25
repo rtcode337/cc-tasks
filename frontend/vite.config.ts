@@ -54,10 +54,10 @@ export default defineConfig({
     // 開発時のみ Vite dev server → Spring にプロキシする。
     // 本番はオリジン 1 個なのでプロキシも CORS も不要 (仕様書 §3)
     proxy: {
-      '/api': { target: 'http://localhost:8930', changeOrigin: false },
-      '/mcp': { target: 'http://localhost:8930', changeOrigin: false },
-      '/oauth2': { target: 'http://localhost:8930', changeOrigin: false },
-      '/login': { target: 'http://localhost:8930', changeOrigin: false },
+      '/api': { target: 'http://localhost:7000', changeOrigin: false },
+      '/mcp': { target: 'http://localhost:7000', changeOrigin: false },
+      '/oauth2': { target: 'http://localhost:7000', changeOrigin: false },
+      '/login': { target: 'http://localhost:7000', changeOrigin: false },
     },
   },
   build: {
