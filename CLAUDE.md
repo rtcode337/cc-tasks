@@ -95,9 +95,14 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 ただし Tomcat の `RemoteIpValve` は `X-Forwarded-Proto: https` を見ると
 `X-Forwarded-Port` が無い限りポートを 443 に固定し、**非標準ポート公開だと
 `{baseUrl}` のポートが落ちて `redirect_uri` が Google 登録値と食い違う**。
-これを避けるため `ForwardedRedirectUriResolver` が `X-Forwarded-Host`(ポート込み)から
-redirect_uri のスキーム/ホスト/ポートを直接組み直す(travel-log と同じ導出)。
+NAS のリバースプロキシはポートを `X-Forwarded-Host` ではなく **`Host` ヘッダ**
+(例 `Host: example.me:7443`)でしか伝えてこないため、これが顕在化する。
+これを避けるため `ForwardedRedirectUriResolver` が origin を自前導出する:
+スキーム=`X-Forwarded-Proto`、ホスト=`X-Forwarded-Host`(あれば)→無ければ `Host` ヘッダ。
+`Host` はポートを保持しているのでポートが残る(Next.js の travel-log と同じ挙動)。
 `PUBLIC_BASE_URL` を明示設定したときはテンプレートが絶対 URL なので書き換えは無効。
+**Google Console の「承認済みリダイレクト URI」にはポート込みで登録が必要**
+(例 `https://example.me:7443/login/oauth2/code/google`)。
 セッション Cookie の `Secure` は `application.yml` で **あえて指定していない** ——
 Tomcat がリクエストのスキームを見て自動で付けるので、http ローカルでは非 Secure、
 https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でログインできる。

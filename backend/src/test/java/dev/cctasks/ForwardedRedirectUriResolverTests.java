@@ -46,6 +46,23 @@ class ForwardedRedirectUriResolverTests {
     }
 
     @Test
+    void X_Forwarded_Host_が無ければ_Host_ヘッダのポートを使う() {
+        // 実際の NAS リバースプロキシの挙動: X-Forwarded-Host は送らず、
+        // Host: example.me:7443 と X-Forwarded-Proto: https だけを送ってくる。
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/google");
+        request.addHeader("X-Forwarded-Proto", "https");
+        // MockHttpServletRequest は Host ヘッダを serverName/serverPort から自動生成しないので明示する
+        request.addHeader("Host", "example.me:7443");
+
+        OAuth2AuthorizationRequest result = resolver.resolve(request);
+
+        assertThat(result.getRedirectUri())
+                .isEqualTo("https://example.me:7443/login/oauth2/code/google");
+    }
+
+    @Test
     void 標準ポートならポート表記なしの_origin_になる() {
         ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
 
