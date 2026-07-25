@@ -55,7 +55,7 @@ REST(PWA 用)と MCP(Claude Code 用)は同じ Spring Boot アプリに同居し
 ```
 
 backend(dev プロファイル / **認証なし**)+ 継続コンパイル + フロント(Vite HMR)を
-まとめて起動する。ブラウザで開くのは **http://localhost:8931**。
+まとめて起動する。ブラウザで開くのは **http://localhost:7001**。
 
 - フロント: 保存で即 HMR
 - バックエンド: 保存 → 再コンパイル → devtools が数秒で自動再起動
@@ -68,7 +68,7 @@ backend(dev プロファイル / **認証なし**)+ 継続コンパイル + フ�
 cd backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
 cd backend && ./gradlew -t classes          # 別ターミナル
 
-# frontend (:8931)。/api と /mcp を :7000 にプロキシ
+# frontend (:7001)。/api と /mcp を :7000 にプロキシ
 cd frontend && npm install && npm run dev
 ```
 

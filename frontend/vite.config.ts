@@ -50,7 +50,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 8931,
+    port: 7001,
     // 開発時のみ Vite dev server → Spring にプロキシする。
     // 本番はオリジン 1 個なのでプロキシも CORS も不要 (仕様書 §3)
     proxy: {

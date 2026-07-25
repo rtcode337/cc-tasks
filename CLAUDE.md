@@ -36,7 +36,7 @@ cd backend
 ```bash
 cd frontend
 npm install
-npm run dev       # :8931 → /api と /mcp を :7000 にプロキシ
+npm run dev       # :7001 → /api と /mcp を :7000 にプロキシ
 npm run build     # vue-tsc の型チェック込み
 ```
 
@@ -54,7 +54,8 @@ docker compose -f compose.build.yaml up --build
 `main` への push で GitHub Actions([.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml))が
 `ghcr.io/<owner>/cc-tasks` をビルド・公開する。本番はビルドせず `compose.yaml`(image を pull)を使い、
 `docker compose pull && docker compose up -d` で更新するだけ。タグは `latest` と `sha-xxxxxxx`。
-arm64 も出す場合はワークフローの matrix の arm64 行を有効化(無料 arm ランナーは public リポジトリ限定)。
+amd64 / arm64 の両方をネイティブランナーで並列ビルドして 1 マニフェストにまとめる
+(arm64 の無料 `ubuntu-24.04-arm` ランナーは public リポジトリ限定)。
 
 ## 動作確認の記録 (v0.1 時点)
 
@@ -96,13 +97,13 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 `X-Forwarded-Port` が無い限りポートを 443 に固定し、**非標準ポート公開だと
 `{baseUrl}` のポートが落ちて `redirect_uri` が Google 登録値と食い違う**。
 NAS のリバースプロキシはポートを `X-Forwarded-Host` ではなく **`Host` ヘッダ**
-(例 `Host: example.me:7443`)でしか伝えてこないため、これが顕在化する。
+(例 `Host: example.me:8443`)でしか伝えてこないため、これが顕在化する。
 これを避けるため `ForwardedRedirectUriResolver` が origin を自前導出する:
 スキーム=`X-Forwarded-Proto`、ホスト=`X-Forwarded-Host`(あれば)→無ければ `Host` ヘッダ。
 `Host` はポートを保持しているのでポートが残る(Next.js の travel-log と同じ挙動)。
 `PUBLIC_BASE_URL` を明示設定したときはテンプレートが絶対 URL なので書き換えは無効。
 **Google Console の「承認済みリダイレクト URI」にはポート込みで登録が必要**
-(例 `https://example.me:7443/login/oauth2/code/google`)。
+(例 `https://example.me:8443/login/oauth2/code/google`)。
 セッション Cookie の `Secure` は `application.yml` で **あえて指定していない** ——
 Tomcat がリクエストのスキームを見て自動で付けるので、http ローカルでは非 Secure、
 https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でログインできる。
@@ -135,9 +136,13 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧
 - 「完了」は `status=done`(削除ではない)、「削除」は物理削除。完了タスクは `/tasks` の「完了したタスクを表示」で確認(10 件ずつページング。`?done=true&page=&size=`)
 - コピーは複製に見えないようクリップボードアイコンでカード左上に置く
-- 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :8931、dev は認証なし
+- 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7001、dev は認証なし
 - セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
 - 管理系エンドポイント(Actuator 等)は追加しない
+- **コードを変更したら、その内容に合わせて `CLAUDE.md` と `README.md` も同じコミットで更新する**。
+  特にポート番号・環境変数・コマンド・ディレクトリ構成・CI/CD ワークフロー・API 仕様など、
+  ドキュメントに書かれている事実が変わったときは必ず追従させる(記述と実装を食い違わせない)。
+  該当する記述が無ければ更新は不要。迷ったら両ファイルを grep して古い記述が残っていないか確認する
 
 ## MCP 接続(ドッグフーディング)
 
