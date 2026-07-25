@@ -47,7 +47,7 @@ public class ProjectController {
 
     @PatchMapping("/{id}")
     public ProjectResponse update(@PathVariable long id, @RequestBody UpdateProjectRequest request) {
-        Project updated = projectService.update(id, request.name(), request.repoUrl(),
+        Project updated = projectService.update(id, request.name(), request.repoUrls(),
                 request.description(), request.archived());
         return ProjectResponse.from(updated);
     }
