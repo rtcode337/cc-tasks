@@ -76,15 +76,37 @@ cd frontend && npm install && npm run dev
 > 反復は上記の dev ループで行い、Google ログイン込みで確認したいときだけ
 > `docker compose` を使う(セッションは永続化されるので再起動しても再ログイン不要)。
 
-### 本番
+### 本番運用(GHCR から pull するだけ)
+
+イメージは **GitHub Actions が `main` への push でビルドし GHCR へ公開**する
+([.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml))。
+本番サーバーはビルドせず、リポジトリ(compose.yaml と .env)だけ置いて pull する。
 
 ```bash
-cp .env.example .env    # 値を埋める
-docker compose up -d --build
+cp .env.example .env    # 初回のみ。値を埋める
+
+# リポジトリが非公開(=GHCR イメージも非公開)の間は初回だけ GHCR にログイン。
+# read:packages 権限の PAT を使う。リポジトリを公開しパッケージも public にすれば不要。
+echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+
+# 更新はこれだけ
+docker compose pull && docker compose up -d
 ```
 
-`compose.yaml` は `127.0.0.1:8930` にだけ公開する。HTTPS 終端と外部公開は
-手前のリバースプロキシの責務。
+- `compose.yaml` は `127.0.0.1:8930` にだけ公開する。HTTPS 終端と外部公開は手前のリバースプロキシの責務
+- タグは `latest` と `sha-xxxxxxx`。切り戻しは `CCTASKS_IMAGE=ghcr.io/rtcode337/cc-tasks:sha-xxxxxxx docker compose up -d`
+- データ(SQLite・セッション)は名前付きボリューム `cctasks-data` に残るので、pull・再作成しても消えない
+
+### ローカルでイメージをビルドして確認
+
+本番同等(Google ログイン込み)を手元で試すとき:
+
+```bash
+cp .env.example .env
+docker compose -f compose.build.yaml up -d --build
+```
+
+> 普段の反復は `./dev.sh`(ホットリロード)で十分。Docker は本番同等確認のときだけ使う。
 
 ### 環境変数
 

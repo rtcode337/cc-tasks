@@ -1,0 +1,119 @@
+# main への push で本番用 Docker イメージをビルドし、GHCR へ公開する。
+# 本番環境の更新はこれを pull するだけでよい(README「本番運用」参照)。
+#   ghcr.io/<owner>/cc-tasks  … アプリ本体(Dockerfile の runtime ステージ)
+#
+# アーキごとに「そのアーキのネイティブランナー」で並列ビルドし、ダイジェストで
+# push したものを最後の merge ジョブでマニフェスト(latest / sha-xxxxxxx)にまとめる。
+# QEMU エミュレーションだと gradle / npm のビルドが極端に遅く不安定なため。
+name: docker-publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  # アーキごとにネイティブランナーでビルドし、タグを付けずダイジェストで push する
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          # arm64 も出す場合は以下を有効化する。
+          # ただし無料の ubuntu-24.04-arm ランナーは public リポジトリ限定なので、
+          # 非公開の間はコメントのままにしておく(公開後に有効化すれば travel-log と同じ
+          # amd64/arm64 マルチアーキになる)。
+          # - platform: linux/arm64
+          #   runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # タグではなくダイジェストで push する(マニフェストは merge ジョブで作る)
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=app-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=app-${{ matrix.platform }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # 各アーキのダイジェストを 1 つのマニフェスト(latest / sha-xxxxxxx タグ)にまとめて push する。
+  # アーキが 1 つでも同じ流れで動く(マニフェストにそのアーキだけが載る)。
+  merge:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          # latest(既定ブランチのみ)+ コミット SHA(sha-xxxxxxx)の 2 タグ。
+          # 障害時は SHA タグを指定して pull すれば任意の時点に戻せる。
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}

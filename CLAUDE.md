@@ -42,12 +42,19 @@ npm run build     # vue-tsc の型チェック込み
 
 バックエンドを `dev` プロファイルで起動しておくこと。
 
-### 単一コンテナで動かす
+### 単一コンテナで動かす(ローカルビルド)
 
 ```bash
 cp .env.example .env   # 値を埋める
-docker compose up --build
+docker compose -f compose.build.yaml up --build
 ```
+
+### 本番(GHCR + pull)
+
+`main` への push で GitHub Actions([.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml))が
+`ghcr.io/<owner>/cc-tasks` をビルド・公開する。本番はビルドせず `compose.yaml`(image を pull)を使い、
+`docker compose pull && docker compose up -d` で更新するだけ。タグは `latest` と `sha-xxxxxxx`。
+arm64 も出す場合はワークフローの matrix の arm64 行を有効化(無料 arm ランナーは public リポジトリ限定)。
 
 ## 動作確認の記録 (v0.1 時点)
 

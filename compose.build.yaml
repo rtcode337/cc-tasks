@@ -1,0 +1,33 @@
+# ローカルでイメージをビルドして本番同等に動かす用。
+#
+#   docker compose -f compose.build.yaml up -d --build
+#
+# 本番は compose.yaml(GHCR から pull)を使う。設定は compose.yaml と揃えてあり、
+# 違いは image を pull せず手元でビルドする点だけ。
+services:
+  cctasks:
+    build: .
+    image: ghcr.io/rtcode337/cc-tasks:local
+    container_name: cc-tasks
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8930:8930"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID を .env に設定してください}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET を .env に設定してください}
+      ALLOWED_EMAIL: ${ALLOWED_EMAIL:?ログインを許可するメールアドレスを .env に設定してください}
+      MCP_API_KEY: ${MCP_API_KEY:?MCP 用 API キーを .env に設定してください}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      DB_PATH: /data/cctasks.db
+      TZ: Asia/Tokyo
+    volumes:
+      - cctasks-data:/data
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cctasks-data:

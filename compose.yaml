@@ -1,8 +1,15 @@
-# 本番用。TLS 終端はこの手前のリバースプロキシの責務 (仕様書 §3, §6.3)
+# 本番用。イメージは GitHub Actions(.github/workflows/docker-publish.yml)が
+# main への push でビルドし GHCR へ公開する。本番ではビルドせず pull するだけ:
+#
+#   docker compose pull && docker compose up -d
+#
+# TLS 終端と外部公開はこの手前のリバースプロキシの責務 (仕様書 §3, §6.3)。
+# ローカルでイメージをビルドして動かしたいときは compose.build.yaml を使う。
 services:
   cctasks:
-    build: .
-    image: cc-tasks:0.1.0
+    # 障害時は :latest ではなく :sha-xxxxxxx を指定すれば任意の時点に戻せる。
+    # CCTASKS_IMAGE で上書き可(既定は GHCR の latest)。
+    image: ${CCTASKS_IMAGE:-ghcr.io/rtcode337/cc-tasks:latest}
     container_name: cc-tasks
     restart: unless-stopped
     ports:
