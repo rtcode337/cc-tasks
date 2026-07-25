@@ -6,6 +6,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import StatusBadge from '@/components/StatusBadge.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import type { Task } from '@/api/types'
 
@@ -137,6 +138,10 @@ async function remove(id: number, fromDone = false) {
         <li v-for="task in visibleActive" :key="task.id" class="card">
           <div class="card__body">
             <CopyButton icon :text="task.title" class="card__copy" />
+            <ClaudeCodeButton
+              :task="task"
+              :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+            />
             <div class="card__main">
               <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
               <StatusBadge :status="task.status" class="card__badge" />
@@ -170,6 +175,10 @@ async function remove(id: number, fromDone = false) {
           <li v-for="task in doneItems" :key="task.id" class="card">
             <div class="card__body">
               <CopyButton icon :text="task.title" class="card__copy" />
+              <ClaudeCodeButton
+                :task="task"
+                :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+              />
               <div class="card__main">
                 <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
                 <StatusBadge :status="task.status" class="card__badge" />

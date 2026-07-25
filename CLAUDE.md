@@ -136,6 +136,11 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧
 - 「完了」は `status=done`(削除ではない)、「削除」は物理削除。完了タスクは `/tasks` の「完了したタスクを表示」で確認(10 件ずつページング。`?done=true&page=&size=`)
 - コピーは複製に見えないようクリップボードアイコンでカード左上に置く
+- ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
+  `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く(スマホではユニバーサルリンクで
+  Claude アプリが開く)。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
+  プロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに変換して付与し、
+  プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
 - 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7001、dev は認証なし
 - セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
 - 管理系エンドポイント(Actuator 等)は追加しない

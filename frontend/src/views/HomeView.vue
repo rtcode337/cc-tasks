@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import CopyButton from '@/components/CopyButton.vue'
+import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
 const tasks = useTaskStore()
@@ -95,6 +96,10 @@ async function remove(id: number) {
         <li v-for="task in tasks.todo" :key="task.id" class="card">
           <div class="card__body">
             <CopyButton icon :text="task.title" class="card__copy" />
+            <ClaudeCodeButton
+              :task="task"
+              :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+            />
             <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
           </div>
           <div class="card__foot">

@@ -9,6 +9,7 @@ import type { TaskDetail, TaskStatus } from '@/api/types'
 import StatusBadge from '@/components/StatusBadge.vue'
 import MarkdownText from '@/components/MarkdownText.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
 const props = defineProps<{ id: string }>()
@@ -116,6 +117,11 @@ function formatDate(iso: string): string {
 
       <div class="titlebar">
         <CopyButton icon :text="task.title" label="タスクをコピー" class="titlebar__copy" />
+        <ClaudeCodeButton
+          :task="task"
+          :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+          class="titlebar__copy"
+        />
         <h1 class="title">{{ task.title }}</h1>
       </div>
       <p class="meta">
