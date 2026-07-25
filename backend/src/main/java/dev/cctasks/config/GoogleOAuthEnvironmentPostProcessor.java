@@ -38,9 +38,9 @@ public class GoogleOAuthEnvironmentPostProcessor implements EnvironmentPostProce
         properties.put(PREFIX + "client-name", "Google");
 
         // PUBLIC_BASE_URL は任意。設定されていればそれを基点にリダイレクト URI を組む。
-        // 未設定なら Spring 既定の {baseUrl}(= ForwardedHeaderFilter 適用後の
-        // リクエストのスキーム/ホスト)に任せる。プロキシが X-Forwarded-Proto /
-        // X-Forwarded-Host を送っていれば未設定で問題ない。
+        // 未設定なら {baseUrl} を使うが、ポートの復元は ForwardedRedirectUriResolver が
+        // X-Forwarded-Host(ポート込み)から直接行う。プロキシが X-Forwarded-Proto /
+        // X-Forwarded-Host を送っていれば、非標準ポート公開でも未設定で redirect_uri が合う。
         // (.mcp.json の ${PUBLIC_BASE_URL} はクライアント側で展開される別物)
         String publicBaseUrl = environment.getProperty("PUBLIC_BASE_URL");
         String redirectBase = StringUtils.hasText(publicBaseUrl)

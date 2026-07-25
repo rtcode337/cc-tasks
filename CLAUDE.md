@@ -92,6 +92,12 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 
 `PUBLIC_BASE_URL` は任意。設定すればリダイレクト URI の基点になり、未設定なら
 `{baseUrl}`(`ForwardedHeaderFilter` 適用後のリクエスト)から導出する。
+ただし Tomcat の `RemoteIpValve` は `X-Forwarded-Proto: https` を見ると
+`X-Forwarded-Port` が無い限りポートを 443 に固定し、**非標準ポート公開だと
+`{baseUrl}` のポートが落ちて `redirect_uri` が Google 登録値と食い違う**。
+これを避けるため `ForwardedRedirectUriResolver` が `X-Forwarded-Host`(ポート込み)から
+redirect_uri のスキーム/ホスト/ポートを直接組み直す(travel-log と同じ導出)。
+`PUBLIC_BASE_URL` を明示設定したときはテンプレートが絶対 URL なので書き換えは無効。
 セッション Cookie の `Secure` は `application.yml` で **あえて指定していない** ——
 Tomcat がリクエストのスキームを見て自動で付けるので、http ローカルでは非 Secure、
 https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でログインできる。

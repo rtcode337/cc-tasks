@@ -27,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.util.StringUtils;
 
 /**
  * 仕様書 §6 の実装。
@@ -118,8 +119,16 @@ public class SecurityConfig {
             return http.build();
         }
 
+        // リダイレクト URI のポートは X-Forwarded-Host(ポート込み)から保持する。
+        // PUBLIC_BASE_URL 設定時はテンプレートが絶対 URL なので書き換えは無効化される。
+        ForwardedRedirectUriResolver redirectUriResolver = new ForwardedRedirectUriResolver(
+                clientRegistrations.getIfAvailable(),
+                StringUtils.hasText(properties.publicBaseUrl()));
+
         return http
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(authz -> authz
+                                .authorizationRequestResolver(redirectUriResolver))
                         .userInfoEndpoint(userInfo -> userInfo
                                 .oidcUserService(AllowedEmailUserServices.oidc(properties.allowedEmail()))
                                 .userService(AllowedEmailUserServices.oauth2(properties.allowedEmail())))
