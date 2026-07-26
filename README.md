@@ -26,7 +26,8 @@ Claude Code に依頼したいタスクをメモ・管理する自分専用 Web 
 各カード左上の 📋 アイコンで本文をクリップボードへコピー。「完了」で done に、「削除」で物理削除する。
 📋 の隣の ✳ アイコンは **Claude Code へのハンドオフ**:タスク内容をプリフィルした
 `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く。Claude モバイルアプリは
-クエリのプリフィルを引き継がないため、JS 遷移でユニバーサルリンクを回避し、スマホでも
+クエリのプリフィルを引き継がないため、同一オリジンの中継ページ `/handoff` を挟んで
+タップ操作が消えてから JS で遷移し、ユニバーサルリンクを回避してスマホでも
 ブラウザ版 Claude Code が開くようにしている。`repositories` にはプロジェクトの
 リポジトリ URL のうち GitHub のものを `owner/repo` に変換して渡す。送信はプリフィルのみで、
 実行開始はその場でワンタップ。
@@ -198,9 +199,9 @@ cd frontend && npm run typecheck
 ## 将来構想
 
 - **✳ ハンドオフを Claude アプリ起動に戻す**: Claude モバイルアプリはユニバーサルリンクの
-  クエリ(`prompt` / `repositories`)を引き継がないため、現状はやむを得ず空タブ + JS 遷移で
-  ユニバーサルリンクを回避し、スマホでもブラウザ版 claude.ai/code を開いている
-  ([ClaudeCodeButton.vue](frontend/src/components/ClaudeCodeButton.vue))。
+  クエリ(`prompt` / `repositories`)を引き継がないため、現状はやむを得ず中継ページ
+  `/handoff`([HandoffView.vue](frontend/src/views/HandoffView.vue))からの JS 遷移で
+  ユニバーサルリンクを回避し、スマホでもブラウザ版 claude.ai/code を開いている。
   アプリがプリフィルを引き継ぐようになったら、この回避をやめて通常のリンク遷移
   (タップでアプリが開く)に戻したい
 

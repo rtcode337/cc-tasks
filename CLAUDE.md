@@ -138,8 +138,9 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - コピーは複製に見えないようクリップボードアイコンでカード左上に置く
 - ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
   `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く。Claude モバイルアプリは
-  クエリを引き継がないため、空タブ + JS 遷移でユニバーサルリンクを回避してスマホでも
-  ブラウザ版を開く。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
+  クエリを引き継がないため、同一オリジンの中継ページ `/handoff`(`HandoffView.vue`)を挟み、
+  タップ操作が消えてから JS で遷移してユニバーサルリンクを回避し、スマホでもブラウザ版を
+  開く。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
   プロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに変換して付与し、
   プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
 - 下に引っ張って更新: PWA にはリロード手段が無いため App.vue がタッチジェスチャを検知し、
