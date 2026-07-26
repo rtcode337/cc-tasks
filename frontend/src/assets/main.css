@@ -63,6 +63,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* アプリ独自の「引っ張って更新」(App.vue)と Chrome 標準のプル更新が二重にならないように */
+  overscroll-behavior-y: contain;
 }
 
 body {

@@ -1,14 +1,74 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { usePullToRefresh } from '@/lib/pullToRefresh'
 import CopyButton from '@/components/CopyButton.vue'
 import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
+import type { Task } from '@/api/types'
 
 const tasks = useTaskStore()
 const projects = useProjectStore()
+
+// 下に引っ張ったら一覧を取り直す
+usePullToRefresh(() => Promise.all([projects.load(true), tasks.load(true)]))
+
+// 未着手一覧のプロジェクトごとの折りたたみ。デフォルトは閉じた状態で、
+// 開いたグループだけをブラウザに永続化する
+const EXPANDED_KEY = 'cc-tasks-home-expanded'
+
+interface TaskGroup {
+  key: string
+  name: string
+  tasks: Task[]
+}
+
+function loadExpanded(): Set<string> {
+  try {
+    const raw = localStorage.getItem(EXPANDED_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+const expanded = ref(loadExpanded())
+
+function toggleGroup(key: string) {
+  const next = new Set(expanded.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expanded.value = next
+  try {
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...next]))
+  } catch {
+    // 保存できなくてもその場の開閉は効くので握りつぶす
+  }
+}
+
+/**
+ * 未着手をプロジェクトごとにまとめる。todo は作成日時降順なので、
+ * 挿入順のままでグループも「最新タスクを持つプロジェクトが上」になる。
+ */
+const groups = computed<TaskGroup[]>(() => {
+  const map = new Map<string, TaskGroup>()
+  for (const task of tasks.todo) {
+    const key = task.projectId != null ? `p${task.projectId}` : 'none'
+    let group = map.get(key)
+    if (!group) {
+      group = {
+        key,
+        name: task.projectId != null ? projects.name(task.projectId) : '未紐づけ',
+        tasks: [],
+      }
+      map.set(key, group)
+    }
+    group.tasks.push(task)
+  }
+  return [...map.values()]
+})
 
 const error = ref<string | null>(null)
 const memo = ref('')
@@ -92,27 +152,39 @@ async function remove(id: number) {
       <p v-if="tasks.loading" class="muted">読み込み中…</p>
       <p v-else-if="tasks.todo.length === 0" class="muted">タスクはまだありません。</p>
 
-      <ul v-else class="cards">
-        <li v-for="task in tasks.todo" :key="task.id" class="card">
-          <div class="card__body">
-            <CopyButton icon :text="task.title" class="card__copy" />
-            <ClaudeCodeButton
-              :task="task"
-              :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
-            />
-            <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
-          </div>
-          <div class="card__foot">
-            <span class="card__project">
-              {{ task.projectId ? projects.name(task.projectId) : '未紐づけ' }}
-            </span>
-            <span class="card__buttons">
-              <button type="button" class="btn btn--done" @click="complete(task.id)">完了</button>
-              <button type="button" class="btn btn--delete" @click="remove(task.id)">削除</button>
-            </span>
-          </div>
-        </li>
-      </ul>
+      <div v-else class="groups">
+        <section v-for="group in groups" :key="group.key" class="group">
+          <button
+            type="button"
+            class="group__header"
+            :aria-expanded="expanded.has(group.key)"
+            @click="toggleGroup(group.key)"
+          >
+            <span class="group__chevron" :class="{ 'group__chevron--open': expanded.has(group.key) }">▸</span>
+            <span class="group__name">{{ group.name }}</span>
+            <span class="group__count">{{ group.tasks.length }}</span>
+          </button>
+
+          <ul v-show="expanded.has(group.key)" class="cards">
+            <li v-for="task in group.tasks" :key="task.id" class="card">
+              <div class="card__body">
+                <CopyButton icon :text="task.title" class="card__copy" />
+                <ClaudeCodeButton
+                  :task="task"
+                  :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+                />
+                <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
+              </div>
+              <div class="card__foot">
+                <span class="card__buttons">
+                  <button type="button" class="btn btn--done" @click="complete(task.id)">完了</button>
+                  <button type="button" class="btn btn--delete" @click="remove(task.id)">削除</button>
+                </span>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
     </section>
   </section>
 </template>
@@ -162,6 +234,55 @@ async function remove(id: number) {
   color: var(--muted-dim);
 }
 
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.group__header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  margin: 0 0 0.375rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.group__header:hover .group__name {
+  color: var(--text);
+}
+
+.group__chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  color: var(--muted-dim);
+}
+
+.group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.group__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  color: var(--muted-dim);
+}
+
 .cards {
   list-style: none;
   margin: 0;
@@ -204,17 +325,9 @@ async function remove(id: number) {
 .card__foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 0.625rem;
-}
-
-.card__project {
-  font-size: 0.75rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .card__buttons {

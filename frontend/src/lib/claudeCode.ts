@@ -13,8 +13,9 @@ export function githubSlug(url: string): string | null {
 
 /**
  * タスク内容をプリフィルした Claude Code の URL を組み立てる。
- * https リンクなので PC ではそのまま Web 版が開き、スマホでは
- * ユニバーサルリンクとして Claude アプリの Claude Code が開く。
+ * Claude モバイルアプリはクエリ(prompt / repositories)を引き継がないため、
+ * 開く側(ClaudeCodeButton)が JS 遷移でユニバーサルリンクを回避し、
+ * スマホでもブラウザ版が開くようにしている。
  * repositories は GitHub の URL だけを owner/repo に変換して渡す
  * (それ以外の URL は Claude 側が解釈できないため落とす)。
  */
@@ -25,7 +26,8 @@ export function claudeCodeUrl(task: Task, repoUrls?: string[]): string {
   if (task.outOfScope) lines.push('', '## スコープ外', task.outOfScope)
   lines.push(
     '',
-    `作業の経緯や結果は cc-tasks の MCP(add_note)でタスク #${task.id} に書き戻してください。`,
+    `作業の経緯や結果は、cc-tasks の MCP(add_note)が使えるならタスク #${task.id} に書き戻してください。` +
+      'MCP が接続されていない場合は、代わりに最後へ経緯と結果の要約をまとめて出力してください(人手で書き戻します)。',
   )
 
   let prompt = lines.join('\n')

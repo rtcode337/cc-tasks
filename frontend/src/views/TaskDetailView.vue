@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { usePullToRefresh } from '@/lib/pullToRefresh'
 import { STATUS_LABELS, TASK_STATUSES } from '@/api/types'
 import type { TaskDetail, TaskStatus } from '@/api/types'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -29,6 +30,9 @@ onMounted(async () => {
   projects.load().catch(() => undefined)
   await reload()
 })
+
+// 下に引っ張ったらタスクを取り直す(Claude Code が書き戻したノートの確認に効く)
+usePullToRefresh(reload)
 
 async function reload() {
   loading.value = true

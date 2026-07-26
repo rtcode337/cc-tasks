@@ -2,10 +2,14 @@
 import { onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
+import { usePullToRefresh } from '@/lib/pullToRefresh'
 import type { Project } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
 const projects = useProjectStore()
+
+// 下に引っ張ったら一覧を取り直す
+usePullToRefresh(() => projects.load(true))
 const error = ref<string | null>(null)
 const saving = ref(false)
 

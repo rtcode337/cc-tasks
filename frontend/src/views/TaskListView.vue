@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { api } from '@/api/client'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { usePullToRefresh } from '@/lib/pullToRefresh'
 import StatusBadge from '@/components/StatusBadge.vue'
 import CopyButton from '@/components/CopyButton.vue'
 import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
@@ -34,6 +35,12 @@ onMounted(async () => {
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
+})
+
+// 下に引っ張ったら一覧を取り直す(完了表示中は現在ページも再取得)
+usePullToRefresh(async () => {
+  await Promise.all([projects.load(true), tasks.load(true)])
+  if (mode.value === 'done') await loadDone(donePage.value)
 })
 
 const visibleActive = computed<Task[]>(() => {

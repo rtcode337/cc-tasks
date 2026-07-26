@@ -133,14 +133,18 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - PATCH は「null のフィールドは変更しない」部分更新。空文字は「消す」
 - タスク(メモ)のプロジェクト紐づけは任意(`project_id` は nullable)。未紐づけで放り込み、後から紐づけられる
 - 一覧の並びは作成日時降順で固定(更新で順番が動くと探しづらいため `updated_at` ではなく `created_at`)
-- UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧
+- UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧(プロジェクトごとに折りたたみ、デフォルトは閉。開いたグループを localStorage `cc-tasks-home-expanded` に保存)
 - 「完了」は `status=done`(削除ではない)、「削除」は物理削除。完了タスクは `/tasks` の「完了したタスクを表示」で確認(10 件ずつページング。`?done=true&page=&size=`)
 - コピーは複製に見えないようクリップボードアイコンでカード左上に置く
 - ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
-  `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く(スマホではユニバーサルリンクで
-  Claude アプリが開く)。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
+  `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く。Claude モバイルアプリは
+  クエリを引き継がないため、空タブ + JS 遷移でユニバーサルリンクを回避してスマホでも
+  ブラウザ版を開く。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
   プロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに変換して付与し、
   プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
+- 下に引っ張って更新: PWA にはリロード手段が無いため App.vue がタッチジェスチャを検知し、
+  ビューが `usePullToRefresh`(`frontend/src/lib/pullToRefresh.ts`)で登録した再読込処理を呼ぶ。
+  未登録の画面はページ全体のリロードにフォールバック(編集画面で発火すると入力が消える点に注意)
 - 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7001、dev は認証なし
 - セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
 - 管理系エンドポイント(Actuator 等)は追加しない
