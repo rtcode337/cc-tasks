@@ -95,6 +95,10 @@ export const api = {
   updateProject: (id: number, input: ProjectInput) =>
     request<Project>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
 
+  /** 並び替え。全プロジェクトの id を望む順で送ると、並び替え後の全件を返す。 */
+  reorderProjects: (ids: number[]) =>
+    request<Project[]>('/api/projects/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+
   listTasks: (params: { projectId?: number; status?: TaskStatus; done?: boolean } = {}) => {
     const query = new URLSearchParams()
     if (params.projectId !== undefined) query.set('projectId', String(params.projectId))

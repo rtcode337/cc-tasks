@@ -3,7 +3,10 @@ package dev.cctasks.project;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import dev.cctasks.web.ApiException;
 
@@ -26,9 +29,9 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public List<Project> list(Boolean archived) {
         if (archived == null) {
-            return repository.findAllOrderByName();
+            return repository.findAllOrdered();
         }
-        return repository.findByArchivedOrderByName(archived);
+        return repository.findByArchivedOrdered(archived);
     }
 
     @Transactional(readOnly = true)
@@ -49,8 +52,9 @@ public class ProjectService {
         requireNameAvailable(trimmedName, null);
         Instant now = now();
         try {
+            // 新規プロジェクトは並びの末尾に足す
             return repository.save(new Project(null, trimmedName, joinRepoUrls(repoUrls),
-                    blankToNull(description), false, now, now));
+                    blankToNull(description), false, repository.maxSortOrder() + 1, now, now));
         }
         catch (DuplicateKeyException ex) {
             throw ApiException.conflict("同名のプロジェクトが既にあります: " + trimmedName);
@@ -73,6 +77,7 @@ public class ProjectService {
                 repoUrls != null ? joinRepoUrls(repoUrls) : current.repoUrls(),
                 description != null ? blankToNull(description) : current.description(),
                 archived != null ? archived : current.archived(),
+                current.sortOrder(),
                 current.createdAt(),
                 now());
         try {
@@ -81,6 +86,23 @@ public class ProjectService {
         catch (DuplicateKeyException ex) {
             throw ApiException.conflict("同名のプロジェクトが既にあります: " + updated.name());
         }
+    }
+
+    /**
+     * 並び替え。ids は全プロジェクト(アーカイブ含む)の id を望む順で過不足なく指定する。
+     * 先頭から 1, 2, 3, … と sort_order を振り直す。
+     */
+    @Transactional
+    public List<Project> reorder(List<Long> ids) {
+        List<Project> all = repository.findAllOrdered();
+        Set<Long> existingIds = all.stream().map(Project::id).collect(Collectors.toSet());
+        if (ids == null || ids.size() != existingIds.size() || !existingIds.equals(new HashSet<>(ids))) {
+            throw ApiException.badRequest("ids には全プロジェクトの id を過不足なく指定してください");
+        }
+        for (int i = 0; i < ids.size(); i++) {
+            repository.updateSortOrder(ids.get(i), i + 1);
+        }
+        return repository.findAllOrdered();
     }
 
     /** name は UNIQUE。自分自身との衝突は無視する。 */

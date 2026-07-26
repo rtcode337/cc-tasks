@@ -144,15 +144,17 @@ async function remove(id: number, fromDone = false) {
       <ul v-else class="cards">
         <li v-for="task in visibleActive" :key="task.id" class="card">
           <div class="card__body">
-            <CopyButton icon :text="task.title" class="card__copy" />
-            <ClaudeCodeButton
-              :task="task"
-              :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
-            />
             <div class="card__main">
               <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
               <StatusBadge :status="task.status" class="card__badge" />
             </div>
+            <span class="card__tools">
+              <CopyButton icon :text="task.title" />
+              <ClaudeCodeButton
+                :task="task"
+                :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+              />
+            </span>
           </div>
           <div class="card__foot">
             <select
@@ -181,15 +183,17 @@ async function remove(id: number, fromDone = false) {
         <ul class="cards">
           <li v-for="task in doneItems" :key="task.id" class="card">
             <div class="card__body">
-              <CopyButton icon :text="task.title" class="card__copy" />
-              <ClaudeCodeButton
-                :task="task"
-                :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
-              />
               <div class="card__main">
                 <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
                 <StatusBadge :status="task.status" class="card__badge" />
               </div>
+              <span class="card__tools">
+                <CopyButton icon :text="task.title" />
+                <ClaudeCodeButton
+                  :task="task"
+                  :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+                />
+              </span>
             </div>
             <div class="card__foot">
               <span class="card__projectlabel">
@@ -281,6 +285,13 @@ async function remove(id: number, fromDone = false) {
 .card__main {
   flex: 1;
   min-width: 0;
+}
+
+.card__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .card__memo,

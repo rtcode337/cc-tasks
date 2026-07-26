@@ -10,6 +10,7 @@ import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskDetail;
 import dev.cctasks.task.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 
 /**
  * REST の入出力 DTO。
@@ -35,13 +36,18 @@ public final class Dtos {
             List<String> repoUrls,
             String description,
             boolean archived,
+            int sortOrder,
             Instant createdAt,
             Instant updatedAt) {
 
         public static ProjectResponse from(Project p) {
             return new ProjectResponse(p.id(), p.name(), p.repoUrlList(), p.description(),
-                    p.archived(), p.createdAt(), p.updatedAt());
+                    p.archived(), p.sortOrder(), p.createdAt(), p.updatedAt());
         }
+    }
+
+    /** 並び替え。全プロジェクトの id を望む順で過不足なく指定する。 */
+    public record ReorderProjectsRequest(@NotEmpty List<Long> ids) {
     }
 
     public record CreateProjectRequest(

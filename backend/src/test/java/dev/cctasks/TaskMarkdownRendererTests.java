@@ -75,7 +75,7 @@ class TaskMarkdownRendererTests {
     void 複数のリポジトリURLはカンマ区切りで並ぶ() {
         Project project = new Project(1L, "multi-repo",
                 "https://github.com/example/app\nhttps://github.com/example/infra",
-                null, false, T1, T1);
+                null, false, 1, T1, T1);
         String markdown = renderer.render(new TaskDetail(
                 new Task(1L, 1L, "タスク", null, null, null, TaskStatus.TODO, T1, T1),
                 project, List.of()));
@@ -86,7 +86,7 @@ class TaskMarkdownRendererTests {
 
     private static TaskDetail detail(Task task, List<Note> notes) {
         Project project = new Project(1L, "sample-project", "https://github.com/example/sample-project",
-                null, false, T1, T1);
+                null, false, 1, T1, T1);
         return new TaskDetail(task, project, notes);
     }
 }

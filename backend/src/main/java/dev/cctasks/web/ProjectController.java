@@ -6,6 +6,7 @@ import dev.cctasks.project.Project;
 import dev.cctasks.project.ProjectService;
 import dev.cctasks.web.Dtos.CreateProjectRequest;
 import dev.cctasks.web.Dtos.ProjectResponse;
+import dev.cctasks.web.Dtos.ReorderProjectsRequest;
 import dev.cctasks.web.Dtos.UpdateProjectRequest;
 import jakarta.validation.Valid;
 
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,6 +45,12 @@ public class ProjectController {
     public ProjectResponse create(@Valid @RequestBody CreateProjectRequest request) {
         Project created = projectService.create(request.name(), request.repoUrls(), request.description());
         return ProjectResponse.from(created);
+    }
+
+    /** 並び替え。全プロジェクトの id を望む順で送ると、並び替え後の一覧を返す。 */
+    @PutMapping("/order")
+    public List<ProjectResponse> reorder(@Valid @RequestBody ReorderProjectsRequest request) {
+        return projectService.reorder(request.ids()).stream().map(ProjectResponse::from).toList();
     }
 
     @PatchMapping("/{id}")

@@ -14,6 +14,8 @@ export interface Project {
   repoUrls: string[]
   description?: string | null
   archived: boolean
+  /** 手動並び替えの表示順(昇順) */
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }

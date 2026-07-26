@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS projects (
     repo_url    TEXT,                             -- リポジトリ URL (複数可・改行区切り。Web版CC連携で使用)
     description TEXT,
     archived    INTEGER NOT NULL DEFAULT 0,       -- 0/1
+    sort_order  INTEGER NOT NULL DEFAULT 0,       -- 手動並び替えの表示順 (昇順)。既存 DB へは SchemaMigrations が ALTER で追加
     created_at  TEXT    NOT NULL,                 -- ISO 8601 (UTC)
     updated_at  TEXT    NOT NULL
 );

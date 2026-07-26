@@ -21,11 +21,12 @@ public record Project(
         @Column("repo_url") String repoUrls,
         String description,
         boolean archived,
+        @Column("sort_order") int sortOrder,
         Instant createdAt,
         Instant updatedAt) {
 
     public Project withId(Long newId) {
-        return new Project(newId, name, repoUrls, description, archived, createdAt, updatedAt);
+        return new Project(newId, name, repoUrls, description, archived, sortOrder, createdAt, updatedAt);
     }
 
     /** 改行区切りの {@code repoUrls} をリストに展開する。未設定なら空リスト。 */

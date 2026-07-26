@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import { usePullToRefresh } from '@/lib/pullToRefresh'
 import type { Project } from '@/api/types'
@@ -41,6 +40,62 @@ function openEdit(project: Project) {
     archived: project.archived,
   })
   modalOpen.value = true
+}
+
+// ---- ☰ ハンドルのドラッグで並び替え(Pointer Events でマウス・タッチ両対応) ----
+const listEl = ref<HTMLElement | null>(null)
+// ドラッグ中だけ使う作業用の並び。null = ドラッグしていない
+const dragList = ref<Project[] | null>(null)
+const dragIndex = ref(-1)
+
+/** 表示はドラッグ中なら作業用、通常はストアの並び */
+const viewList = computed(() => dragList.value ?? projects.all)
+
+function onDragStart(index: number, event: PointerEvent) {
+  dragList.value = [...projects.all]
+  dragIndex.value = index
+  // 以降の pointermove/up をハンドルで受け続ける
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+function onDragMove(event: PointerEvent) {
+  if (!dragList.value || !listEl.value) return
+  // ポインタの Y 座標がどの行の中心線より上かで挿入先を決める
+  const items = Array.from(listEl.value.children) as HTMLElement[]
+  let target = items.length - 1
+  for (let i = 0; i < items.length; i++) {
+    const rect = items[i].getBoundingClientRect()
+    if (event.clientY < rect.top + rect.height / 2) {
+      target = i
+      break
+    }
+  }
+  if (target !== dragIndex.value) {
+    const [moved] = dragList.value.splice(dragIndex.value, 1)
+    dragList.value.splice(target, 0, moved)
+    dragIndex.value = target
+  }
+}
+
+async function onDragEnd() {
+  if (!dragList.value) return
+  const ids = dragList.value.map((p) => p.id)
+  const changed = ids.some((id, i) => projects.all[i]?.id !== id)
+  if (!changed) {
+    dragList.value = null
+    dragIndex.value = -1
+    return
+  }
+  error.value = null
+  try {
+    await projects.reorder(ids)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    // 保存が終わってから表示をストアに戻す(ちらつき防止)。失敗時は元の並びに戻る
+    dragList.value = null
+    dragIndex.value = -1
+  }
 }
 
 function addRepoUrl() {
@@ -99,17 +154,20 @@ async function save() {
     <ErrorBanner v-if="error" :message="error" />
 
     <div class="head">
-      <RouterLink to="/" class="head__back">← 一覧</RouterLink>
-      <button type="button" class="head__add" @click="openCreate">＋ 新規</button>
+      <h1 class="title">プロジェクト</h1>
+      <button type="button" class="button head__add" @click="openCreate">＋ 新規</button>
     </div>
-
-    <h1 class="title">プロジェクト</h1>
 
     <p v-if="projects.loading" class="muted">読み込み中…</p>
     <p v-else-if="projects.all.length === 0" class="muted">まだありません。</p>
 
-    <ul v-else class="list">
-      <li v-for="project in projects.all" :key="project.id">
+    <ul v-else ref="listEl" class="list">
+      <li
+        v-for="(project, i) in viewList"
+        :key="project.id"
+        class="item"
+        :class="{ 'item--dragging': dragList !== null && i === dragIndex }"
+      >
         <button type="button" class="row" @click="openEdit(project)">
           <span class="row__main">
             <span class="row__name">{{ project.name }}</span>
@@ -117,6 +175,24 @@ async function save() {
             <span v-for="url in project.repoUrls" :key="url" class="row__repo">{{ url }}</span>
           </span>
           <span v-if="project.archived" class="row__archived">アーカイブ</span>
+        </button>
+        <button
+          type="button"
+          class="item__handle"
+          aria-label="ドラッグして並び替え"
+          @pointerdown.prevent="onDragStart(i, $event)"
+          @pointermove="onDragMove"
+          @pointerup="onDragEnd"
+          @pointercancel="onDragEnd"
+        >
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <path
+              d="M2 4.5h12M2 8h12M2 11.5h12"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
       </li>
     </ul>
@@ -182,24 +258,18 @@ async function save() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0 0.5rem;
-  font-size: 0.8125rem;
-}
-
-.head__back {
-  color: var(--muted);
+  gap: 0.75rem;
+  padding: 1rem 0;
 }
 
 .head__add {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font: inherit;
-  cursor: pointer;
+  width: auto;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .title {
-  margin: 0.25rem 0 1rem;
+  margin: 0;
   font-size: 1.125rem;
 }
 
@@ -212,8 +282,43 @@ async function save() {
   gap: 0.5rem;
 }
 
+.item {
+  display: flex;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+
+.item--dragging {
+  opacity: 0.85;
+}
+
+.item--dragging .row,
+.item--dragging .item__handle {
+  border-color: var(--accent);
+}
+
+.item__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted-dim);
+  cursor: grab;
+  /* これが無いとタッチのドラッグが画面スクロールに化ける */
+  touch-action: none;
+}
+
+.item__handle:active {
+  cursor: grabbing;
+}
+
 .row {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

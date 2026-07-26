@@ -82,7 +82,8 @@ Spring Data JDBC は SQLite 方言を同梱していない。以下の 2 つが�
   `java.sql.Timestamp` と決めてしまい、SQLite にエポックミリ秒が入る。
 
 DDL は `backend/src/main/resources/schema.sql`。起動のたびに `CREATE TABLE IF NOT EXISTS` で流す。
-列を足すときはここを直す(マイグレーションツールは入れていない)。
+ただしこれは新規 DB にしか効かないため、**列を足すときは schema.sql と `SchemaMigrations`
+(起動時に冪等な ALTER を当てる)の両方を直す**(マイグレーションツールは入れていない)。
 
 再起動後の最初の書き込みが極端に遅くなる問題への対策が 2 つ入っている。
 JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。HDD スピンアップ待ちの回避)と、
@@ -138,9 +139,9 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - PATCH は「null のフィールドは変更しない」部分更新。空文字は「消す」
 - タスク(メモ)のプロジェクト紐づけは任意(`project_id` は nullable)。未紐づけで放り込み、後から紐づけられる
 - 一覧の並びは作成日時降順で固定(更新で順番が動くと探しづらいため `updated_at` ではなく `created_at`)
-- UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧(プロジェクトごとに折りたたみ、デフォルトは閉。開いたグループを localStorage `cc-tasks-home-expanded` に保存)
+- UX は「タスクを素早く放り込む」優先。トップ = タスク入力 + 未着手一覧(プロジェクトごとに折りたたみ、デフォルトは閉。開いたグループを localStorage `cc-tasks-home-expanded` に保存)。未紐づけタスクは見出しなしで先頭に常に展開、以降のグループはプロジェクトの並び順(`sort_order`。プロジェクト画面の ☰ ハンドルのドラッグで変更)
 - 「完了」は `status=done`(削除ではない)、「削除」は物理削除。完了タスクは `/tasks` の「完了したタスクを表示」で確認(10 件ずつページング。`?done=true&page=&size=`)
-- コピーは複製に見えないようクリップボードアイコンでカード左上に置く
+- コピーは複製に見えないようクリップボードアイコンでカード右上(完了・削除ボタンの上)に置く。✳ ハンドオフはその隣
 - ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
   `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く。Claude モバイルアプリは
   クエリを引き継がないため、同一オリジンの中継ページ `/handoff`(`HandoffView.vue`)を挟み、

@@ -23,6 +23,8 @@ interface TaskGroup {
   key: string
   name: string
   tasks: Task[]
+  /** false = 常に展開(未紐づけ用)。ヘッダも開閉ボタンにしない */
+  collapsible: boolean
 }
 
 function loadExpanded(): Set<string> {
@@ -49,25 +51,40 @@ function toggleGroup(key: string) {
 }
 
 /**
- * 未着手をプロジェクトごとにまとめる。todo は作成日時降順なので、
- * 挿入順のままでグループも「最新タスクを持つプロジェクトが上」になる。
+ * 未着手をプロジェクトごとにまとめる。先頭は未紐づけ(常に展開)、
+ * 続いてプロジェクトの並び順(プロジェクト画面で並び替えた順)。
+ * グループ内は todo の並びのまま作成日時降順。
  */
 const groups = computed<TaskGroup[]>(() => {
-  const map = new Map<string, TaskGroup>()
+  const byProject = new Map<number, Task[]>()
+  const unlinked: Task[] = []
   for (const task of tasks.todo) {
-    const key = task.projectId != null ? `p${task.projectId}` : 'none'
-    let group = map.get(key)
-    if (!group) {
-      group = {
-        key,
-        name: task.projectId != null ? projects.name(task.projectId) : '未紐づけ',
-        tasks: [],
-      }
-      map.set(key, group)
+    if (task.projectId == null) {
+      unlinked.push(task)
+    } else {
+      const list = byProject.get(task.projectId)
+      if (list) list.push(task)
+      else byProject.set(task.projectId, [task])
     }
-    group.tasks.push(task)
   }
-  return [...map.values()]
+
+  const result: TaskGroup[] = []
+  if (unlinked.length > 0) {
+    result.push({ key: 'none', name: '未紐づけ', tasks: unlinked, collapsible: false })
+  }
+  // アーカイブ済みプロジェクトのタスクも表示するため all(並び順どおり)を使う
+  for (const p of projects.all) {
+    const list = byProject.get(p.id)
+    if (list) {
+      result.push({ key: `p${p.id}`, name: p.name, tasks: list, collapsible: true })
+      byProject.delete(p.id)
+    }
+  }
+  // プロジェクト一覧の読み込み前などの取りこぼし
+  for (const [projectId, list] of byProject) {
+    result.push({ key: `p${projectId}`, name: `#${projectId}`, tasks: list, collapsible: true })
+  }
+  return result
 })
 
 const error = ref<string | null>(null)
@@ -154,7 +171,9 @@ async function remove(id: number) {
 
       <div v-else class="groups">
         <section v-for="group in groups" :key="group.key" class="group">
+          <!-- 未紐づけ (collapsible=false) は見出しを出さず、常に展開してそのまま並べる -->
           <button
+            v-if="group.collapsible"
             type="button"
             class="group__header"
             :aria-expanded="expanded.has(group.key)"
@@ -165,15 +184,17 @@ async function remove(id: number) {
             <span class="group__count">{{ group.tasks.length }}</span>
           </button>
 
-          <ul v-show="expanded.has(group.key)" class="cards">
+          <ul v-show="!group.collapsible || expanded.has(group.key)" class="cards">
             <li v-for="task in group.tasks" :key="task.id" class="card">
               <div class="card__body">
-                <CopyButton icon :text="task.title" class="card__copy" />
-                <ClaudeCodeButton
-                  :task="task"
-                  :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
-                />
                 <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
+                <span class="card__tools">
+                  <CopyButton icon :text="task.title" />
+                  <ClaudeCodeButton
+                    :task="task"
+                    :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
+                  />
+                </span>
               </div>
               <div class="card__foot">
                 <span class="card__buttons">
@@ -316,6 +337,13 @@ async function remove(id: number) {
   white-space: pre-wrap;
   word-break: break-word;
   padding-top: 0.1875rem;
+}
+
+.card__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .card__memo:hover {
