@@ -126,14 +126,6 @@ async function complete(id: number) {
   }
 }
 
-async function remove(id: number) {
-  error.value = null
-  try {
-    await tasks.remove(id)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  }
-}
 </script>
 
 <template>
@@ -198,8 +190,9 @@ async function remove(id: number) {
               </div>
               <div class="card__foot">
                 <span class="card__buttons">
+                  <!-- 削除はタスク編集画面から。誤タップしやすい一覧には置かない -->
+                  <RouterLink :to="`/tasks/${task.id}/edit`" class="btn btn--edit">編集</RouterLink>
                   <button type="button" class="btn btn--done" @click="complete(task.id)">完了</button>
-                  <button type="button" class="btn btn--delete" @click="remove(task.id)">削除</button>
                 </span>
               </div>
             </li>
@@ -382,9 +375,15 @@ async function remove(id: number) {
   border-color: var(--badge-done-text);
 }
 
-.btn--delete:hover {
-  color: var(--danger);
-  border-color: var(--danger);
+.btn--edit,
+.btn--edit:visited {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.btn--edit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .muted {

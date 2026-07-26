@@ -102,19 +102,6 @@ async function complete(id: number) {
   }
 }
 
-async function remove(id: number, fromDone = false) {
-  error.value = null
-  try {
-    await tasks.remove(id)
-    if (fromDone) {
-      // 削除でそのページが空になったら 1 つ前へ
-      const nextPage = doneItems.value.length === 1 && donePage.value > 0 ? donePage.value - 1 : donePage.value
-      await loadDone(nextPage)
-    }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  }
-}
 </script>
 
 <template>
@@ -167,8 +154,9 @@ async function remove(id: number, fromDone = false) {
               <option v-for="p in projects.active" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
             </select>
             <span class="card__buttons">
+              <!-- 削除はタスク編集画面から。誤タップしやすい一覧には置かない -->
+              <RouterLink :to="`/tasks/${task.id}/edit`" class="btn btn--edit">編集</RouterLink>
               <button type="button" class="btn btn--done" @click="complete(task.id)">完了</button>
-              <button type="button" class="btn btn--delete" @click="remove(task.id)">削除</button>
             </span>
           </div>
         </li>
@@ -199,7 +187,7 @@ async function remove(id: number, fromDone = false) {
               <span class="card__projectlabel">
                 {{ task.projectId ? projects.name(task.projectId) : '未紐づけ' }}
               </span>
-              <button type="button" class="btn btn--delete" @click="remove(task.id, true)">削除</button>
+              <RouterLink :to="`/tasks/${task.id}/edit`" class="btn btn--edit">編集</RouterLink>
             </div>
           </li>
         </ul>
@@ -365,9 +353,15 @@ async function remove(id: number, fromDone = false) {
   border-color: var(--badge-done-text);
 }
 
-.btn--delete:hover:not(:disabled) {
-  color: var(--danger);
-  border-color: var(--danger);
+.btn--edit,
+.btn--edit:visited {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.btn--edit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .pager {

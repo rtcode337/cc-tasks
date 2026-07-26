@@ -16,6 +16,9 @@ const isEdit = computed(() => props.id !== undefined)
 const error = ref<string | null>(null)
 const loading = ref(true)
 const saving = ref(false)
+// コンテキストより下(受け入れ条件・スコープ外・状態)は「高度な設定」として
+// 折りたたみ、保存ボタンをスクロール無しで押せるようにする
+const advancedOpen = ref(false)
 
 const form = reactive({
   projectId: null as number | null,
@@ -37,6 +40,8 @@ onMounted(async () => {
       form.acceptanceCriteria = detail.acceptanceCriteria ?? ''
       form.outOfScope = detail.outOfScope ?? ''
       form.status = detail.status
+      // 中身が入っているなら畳んで隠さない
+      advancedOpen.value = form.acceptanceCriteria !== '' || form.outOfScope !== ''
     } else {
       form.projectId = projects.active[0]?.id ?? null
     }
@@ -75,6 +80,18 @@ async function save() {
     saving.value = false
   }
 }
+
+async function remove() {
+  if (!isEdit.value) return
+  if (!window.confirm('このタスクとノートを削除します。よろしいですか?')) return
+  error.value = null
+  try {
+    await tasks.remove(Number(props.id))
+    await router.replace({ name: 'tasks' })
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  }
+}
 </script>
 
 <template>
@@ -105,19 +122,31 @@ async function save() {
         <textarea v-model="form.context" rows="5" />
       </label>
 
-      <label class="field">
+      <button
+        type="button"
+        class="fold"
+        :aria-expanded="advancedOpen"
+        @click="advancedOpen = !advancedOpen"
+      >
+        <span class="fold__chevron" :class="{ 'fold__chevron--open': advancedOpen }">▸</span>
+        <span>高度な設定</span>
+        <span class="fold__hint">受け入れ条件・スコープ外{{ isEdit ? '・状態' : '' }}</span>
+      </button>
+
+      <!-- v-show なので畳んでも入力値は保持される -->
+      <label v-show="advancedOpen" class="field">
         <span class="field__label">受け入れ条件</span>
         <span class="field__hint">どうなったら完了か</span>
         <textarea v-model="form.acceptanceCriteria" rows="4" />
       </label>
 
-      <label class="field">
+      <label v-show="advancedOpen" class="field">
         <span class="field__label">スコープ外</span>
         <span class="field__hint">今回はやらないこと</span>
         <textarea v-model="form.outOfScope" rows="3" />
       </label>
 
-      <label v-if="isEdit" class="field">
+      <label v-show="advancedOpen && isEdit" class="field">
         <span class="field__label">状態</span>
         <select v-model="form.status">
           <option v-for="status in TASK_STATUSES" :key="status" :value="status">
@@ -131,6 +160,11 @@ async function save() {
         <button type="submit" class="button" :disabled="!form.title.trim() || saving">
           {{ saving ? '保存中…' : '保存' }}
         </button>
+      </div>
+
+      <!-- 削除は一覧・詳細には置かず、ここからだけ行う -->
+      <div v-if="isEdit" class="dangerzone">
+        <button type="button" class="button button--danger" @click="remove">タスクを削除</button>
       </div>
     </form>
   </section>
@@ -171,6 +205,42 @@ async function save() {
   color: var(--muted-dim);
 }
 
+.fold {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.fold:hover {
+  color: var(--text);
+}
+
+.fold__chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  color: var(--muted-dim);
+}
+
+.fold__chevron--open {
+  transform: rotate(90deg);
+}
+
+.fold__hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted-dim);
+}
+
 .actions {
   display: flex;
   gap: 0.75rem;
@@ -179,6 +249,14 @@ async function save() {
 
 .actions .button {
   flex: 1;
+}
+
+.dangerzone {
+  display: flex;
+  justify-content: flex-start;
+  padding: 1rem 0 2rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
 }
 
 .muted {

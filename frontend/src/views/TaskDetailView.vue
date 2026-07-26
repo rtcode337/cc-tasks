@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { api } from '@/api/client'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
@@ -14,7 +14,6 @@ import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
 const props = defineProps<{ id: string }>()
-const router = useRouter()
 const tasks = useTaskStore()
 const projects = useProjectStore()
 
@@ -82,17 +81,6 @@ async function addNote() {
     error.value = e instanceof Error ? e.message : String(e)
   } finally {
     posting.value = false
-  }
-}
-
-async function remove() {
-  if (!task.value) return
-  if (!window.confirm('このタスクとノートを削除します。よろしいですか?')) return
-  try {
-    await tasks.remove(task.value.id)
-    await router.replace({ name: 'tasks' })
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
   }
 }
 
@@ -198,9 +186,6 @@ function formatDate(iso: string): string {
         </ol>
       </section>
 
-      <footer class="footer">
-        <button type="button" class="button button--danger" @click="remove">タスクを削除</button>
-      </footer>
     </template>
   </section>
 </template>
@@ -339,10 +324,6 @@ function formatDate(iso: string): string {
 
 .timeline__author--human {
   color: var(--muted);
-}
-
-.footer {
-  padding: 1rem 0 2rem;
 }
 
 .muted {
