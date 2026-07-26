@@ -5,7 +5,10 @@ spring:
   datasource:
     # SQLite はファイル 1 個。foreign_keys は接続ごとに ON にしないと効かない。
     # WAL + busy_timeout で「読み中に書けない」系のロック衝突を緩和する。
-    url: jdbc:sqlite:${DB_PATH:./data/cctasks.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    # synchronous=NORMAL: WAL ではコミット毎の fsync をやめても DB は壊れない
+    # (電源断で直近コミットが巻き戻る可能性だけ許容)。NAS の HDD がスピンダウン
+    # していると初回書き込みがスピンアップ待ちで数秒〜十数秒止まるのを避ける。
+    url: jdbc:sqlite:${DB_PATH:./data/cctasks.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000&synchronous=NORMAL
     driver-class-name: org.sqlite.JDBC
     hikari:
       # SQLite の書き込みは事実上 1 本。プールを広げても意味が無いので絞る。

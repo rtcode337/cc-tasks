@@ -84,6 +84,11 @@ Spring Data JDBC は SQLite 方言を同梱していない。以下の 2 つが�
 DDL は `backend/src/main/resources/schema.sql`。起動のたびに `CREATE TABLE IF NOT EXISTS` で流す。
 列を足すときはここを直す(マイグレーションツールは入れていない)。
 
+再起動後の最初の書き込みが極端に遅くなる問題への対策が 2 つ入っている。
+JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。HDD スピンアップ待ちの回避)と、
+`WriteWarmup`(起動時に INSERT + DELETE を 1 コミットして、書き込み経路の JIT とディスクの
+初回コストを前払い)。外すと NAS で初回保存が数秒〜十数秒待ちに戻る。
+
 ### OAuth クレデンシャル
 
 `spring.security.oauth2.client.registration.google.client-id` を空文字で置くと
