@@ -1,8 +1,10 @@
 package dev.cctasks.config;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -23,6 +25,11 @@ public class SpaWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Vite の /assets はファイル名にコンテンツハッシュが入るため長期キャッシュしてよい。
+        // ここに Cache-Control を付けないと毎回取り直しになり、初回以外のアクセスも重くなる
+        registry.addResourceHandler("/assets/**")
+                .addResourceLocations("classpath:/static/assets/")
+                .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).immutable());
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/")
                 .resourceChain(true)

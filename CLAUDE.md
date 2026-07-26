@@ -88,7 +88,15 @@ DDL は `backend/src/main/resources/schema.sql`。起動のたびに `CREATE TAB
 再起動後の最初の書き込みが極端に遅くなる問題への対策が 2 つ入っている。
 JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。HDD スピンアップ待ちの回避)と、
 `WriteWarmup`(起動時に INSERT + DELETE を 1 コミットして、書き込み経路の JIT とディスクの
-初回コストを前払い)。外すと NAS で初回保存が数秒〜十数秒待ちに戻る。
+初回コストを前払い)。外すと HDD がスピンダウンする本番環境で初回保存が数秒〜十数秒待ちに戻る。
+
+読み取り側(初回アクセスが極端に重い)にも対をなす対策が `HttpWarmup` に入っている。
+起動直後に自分自身へ GET を投げて MVC・フィルタチェーンのクラスロードと JIT を前払いし
+(ローカル実測で初回 85ms → 5ms。本番ではこのクラスロードが眠った HDD からの jar 読みになり
+数秒〜十数秒に化ける)、さらに 5 分ごとに静的資材(jar 内)と SQLite を読んでページキャッシュに
+留める(キャッシュヒットはディスク I/O ゼロなので HDD は眠ったままでよい)。あわせて
+`SpaWebConfig` で Vite のハッシュ付き `/assets/**` に `Cache-Control: max-age=1y, immutable`
+を付け、再訪時の取り直しを無くしている。
 
 ### OAuth クレデンシャル
 
