@@ -5,14 +5,28 @@ import { claudeCodeUrl } from '@/lib/claudeCode'
 
 const props = defineProps<{ task: Task; repoUrls?: string[] }>()
 
-const href = computed(() => claudeCodeUrl(props.task, props.repoUrls))
+/**
+ * iOS のホーム画面追加(スタンドアロン=PWA)で動いているか。
+ * navigator.standalone は iOS Safari 独自プロパティなので iOS 判定を兼ねる。
+ */
+const isIosStandalone =
+  typeof navigator !== 'undefined' &&
+  (navigator as unknown as { standalone?: boolean }).standalone === true
+
+const href = computed(() => {
+  const url = claudeCodeUrl(props.task, props.repoUrls)
+  // iOS の PWA では外部リンクがアプリ内ブラウザで開いてしまう(claude.ai の
+  // ログインセッションを共有しない)。非公式だが iOS 17+ の x-safari- スキームで
+  // 既定ブラウザの Safari 本体に渡す。効かなくなったら素の URL に戻すこと
+  return isIosStandalone ? `x-safari-${url}` : url
+})
 </script>
 
 <template>
   <!-- タスク内容をプリフィルして Claude Code を開くハンドオフボタン。
        スマホではユニバーサルリンクで Claude アプリが開きプリフィルは失われる
        (空タブ経由・中継ページ /handoff 経由の JS 遷移でも回避できなかった)。
-       モバイルは 📋 コピーで貼り付ける運用とし、ここは素直な直リンクにする -->
+       Claude アプリ側でリンクを一度「Safari で開く」にすればブラウザ版が開く -->
   <a
     class="icon"
     :href="href"
