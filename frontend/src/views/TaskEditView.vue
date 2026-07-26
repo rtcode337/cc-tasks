@@ -16,8 +16,8 @@ const isEdit = computed(() => props.id !== undefined)
 const error = ref<string | null>(null)
 const loading = ref(true)
 const saving = ref(false)
-// コンテキストより下(受け入れ条件・スコープ外・状態)は「高度な設定」として
-// 折りたたみ、保存ボタンをスクロール無しで押せるようにする
+// タスク内容より下(コンテキスト・受け入れ条件・スコープ外・状態)は
+// 「高度な設定」として折りたたみ、保存ボタンをスクロール無しで押せるようにする
 const advancedOpen = ref(false)
 
 const form = reactive({
@@ -41,7 +41,8 @@ onMounted(async () => {
       form.outOfScope = detail.outOfScope ?? ''
       form.status = detail.status
       // 中身が入っているなら畳んで隠さない
-      advancedOpen.value = form.acceptanceCriteria !== '' || form.outOfScope !== ''
+      advancedOpen.value =
+        form.context !== '' || form.acceptanceCriteria !== '' || form.outOfScope !== ''
     } else {
       form.projectId = projects.active[0]?.id ?? null
     }
@@ -97,7 +98,13 @@ async function remove() {
 <template>
   <section>
     <ErrorBanner v-if="error" :message="error" />
-    <h1 class="title">{{ isEdit ? 'タスクを編集' : '新しいタスク' }}</h1>
+    <div class="head">
+      <h1 class="title">{{ isEdit ? 'タスクを編集' : '新しいタスク' }}</h1>
+      <!-- 削除は一覧・詳細には置かず、ここからだけ行う -->
+      <button v-if="isEdit && !loading" type="button" class="delete" @click="remove">
+        タスクを削除
+      </button>
+    </div>
     <p v-if="loading" class="muted">読み込み中…</p>
 
     <form v-else class="form" @submit.prevent="save">
@@ -116,12 +123,6 @@ async function remove() {
         <textarea v-model="form.title" rows="3" required placeholder="やりたいこと" />
       </label>
 
-      <label class="field">
-        <span class="field__label">コンテキスト</span>
-        <span class="field__hint">背景・現状・なぜやりたいのか。Markdown 可</span>
-        <textarea v-model="form.context" rows="5" />
-      </label>
-
       <button
         type="button"
         class="fold"
@@ -130,10 +131,16 @@ async function remove() {
       >
         <span class="fold__chevron" :class="{ 'fold__chevron--open': advancedOpen }">▸</span>
         <span>高度な設定</span>
-        <span class="fold__hint">受け入れ条件・スコープ外{{ isEdit ? '・状態' : '' }}</span>
+        <span class="fold__hint">コンテキスト・受け入れ条件・スコープ外{{ isEdit ? '・状態' : '' }}</span>
       </button>
 
       <!-- v-show なので畳んでも入力値は保持される -->
+      <label v-show="advancedOpen" class="field">
+        <span class="field__label">コンテキスト</span>
+        <span class="field__hint">背景・現状・なぜやりたいのか。Markdown 可</span>
+        <textarea v-model="form.context" rows="5" />
+      </label>
+
       <label v-show="advancedOpen" class="field">
         <span class="field__label">受け入れ条件</span>
         <span class="field__hint">どうなったら完了か</span>
@@ -161,19 +168,35 @@ async function remove() {
           {{ saving ? '保存中…' : '保存' }}
         </button>
       </div>
-
-      <!-- 削除は一覧・詳細には置かず、ここからだけ行う -->
-      <div v-if="isEdit" class="dangerzone">
-        <button type="button" class="button button--danger" @click="remove">タスクを削除</button>
-      </div>
     </form>
   </section>
 </template>
 
 <style scoped>
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1.25rem 0 1rem;
+}
+
 .title {
   font-size: 1.125rem;
-  margin: 1.25rem 0 1rem;
+  margin: 0;
+}
+
+.delete {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .form {
@@ -249,14 +272,6 @@ async function remove() {
 
 .actions .button {
   flex: 1;
-}
-
-.dangerzone {
-  display: flex;
-  justify-content: flex-start;
-  padding: 1rem 0 2rem;
-  margin-top: 0.5rem;
-  border-top: 1px solid var(--border);
 }
 
 .muted {
