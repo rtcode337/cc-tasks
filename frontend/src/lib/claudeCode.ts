@@ -13,9 +13,9 @@ export function githubSlug(url: string): string | null {
 
 /**
  * タスク内容をプリフィルした Claude Code の URL を組み立てる。
- * Claude モバイルアプリはクエリ(prompt / repositories)を引き継がないため、
- * 開く側は中継ページ /handoff(HandoffView)経由でユニバーサルリンクを
- * 回避し、スマホでもブラウザ版が開くようにしている。
+ * スマホではユニバーサルリンクで Claude アプリが開き、アプリはクエリ
+ * (prompt / repositories)を引き継がないためプリフィルは失われる
+ * (JS 遷移での回避も効かなかった)。モバイルは 📋 コピーで運用する。
  * repositories は GitHub の URL だけを owner/repo に変換して渡す
  * (それ以外の URL は Claude 側が解釈できないため落とす)。
  */

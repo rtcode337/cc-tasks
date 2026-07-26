@@ -143,12 +143,13 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - 「完了」は `status=done`(削除ではない)、「削除」は物理削除。完了タスクは `/tasks` の「完了したタスクを表示」で確認(10 件ずつページング。`?done=true&page=&size=`)
 - コピーは複製に見えないようクリップボードアイコンでカード右上(完了・削除ボタンの上)に置く。✳ ハンドオフはその隣
 - ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
-  `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く。Claude モバイルアプリは
-  クエリを引き継がないため、同一オリジンの中継ページ `/handoff`(`HandoffView.vue`)を挟み、
-  タップ操作が消えてから JS で遷移してユニバーサルリンクを回避し、スマホでもブラウザ版を
-  開く。URL 組み立ては `frontend/src/lib/claudeCode.ts`。`repositories` は
-  プロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに変換して付与し、
-  プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
+  `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く**直リンク**。
+  スマホではユニバーサルリンクで Claude アプリが開き、アプリはクエリを引き継がないため
+  プリフィルは失われる。**空タブ + JS 遷移、中継ページ `/handoff` からの JS 遷移の
+  どちらでもユニバーサルリンクの発火は回避できず撤去済み**(再挑戦するとき用のメモ)。
+  スマホは 📋 コピーで貼り付ける運用。URL 組み立ては `frontend/src/lib/claudeCode.ts`。
+  `repositories` はプロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに
+  変換して付与し、プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
 - 下に引っ張って更新: PWA にはリロード手段が無いため App.vue がタッチジェスチャを検知し、
   ビューが `usePullToRefresh`(`frontend/src/lib/pullToRefresh.ts`)で登録した再読込処理を呼ぶ。
   未登録の画面はページ全体のリロードにフォールバック(編集画面で発火すると入力が消える点に注意)

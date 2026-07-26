@@ -5,19 +5,14 @@ import { claudeCodeUrl } from '@/lib/claudeCode'
 
 const props = defineProps<{ task: Task; repoUrls?: string[] }>()
 
-/**
- * claude.ai へのリンクを直接タップするとスマホでユニバーサルリンクが発火して
- * Claude アプリに横取りされ、プリフィルが失われる(アプリはクエリを引き継がない)。
- * 同一オリジンの中継ページ /handoff を挟み、そこから JS で遷移することで
- * アプリ判定を避けてモバイルでもブラウザ版 claude.ai/code を開く。
- */
-const href = computed(
-  () => `/handoff?to=${encodeURIComponent(claudeCodeUrl(props.task, props.repoUrls))}`,
-)
+const href = computed(() => claudeCodeUrl(props.task, props.repoUrls))
 </script>
 
 <template>
-  <!-- タスク内容をプリフィルして Claude Code を開くハンドオフボタン -->
+  <!-- タスク内容をプリフィルして Claude Code を開くハンドオフボタン。
+       スマホではユニバーサルリンクで Claude アプリが開きプリフィルは失われる
+       (空タブ経由・中継ページ /handoff 経由の JS 遷移でも回避できなかった)。
+       モバイルは 📋 コピーで貼り付ける運用とし、ここは素直な直リンクにする -->
   <a
     class="icon"
     :href="href"

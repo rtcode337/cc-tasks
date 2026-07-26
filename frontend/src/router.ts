@@ -20,8 +20,6 @@ export const router = createRouter({
       props: true,
     },
     { path: '/projects', name: 'projects', component: () => import('./views/ProjectsView.vue') },
-    // Claude Code ハンドオフの中継ページ(ユニバーサルリンク回避)
-    { path: '/handoff', name: 'handoff', component: () => import('./views/HandoffView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),
