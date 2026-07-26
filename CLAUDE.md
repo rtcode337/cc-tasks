@@ -110,7 +110,7 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 ただし Tomcat の `RemoteIpValve` は `X-Forwarded-Proto: https` を見ると
 `X-Forwarded-Port` が無い限りポートを 443 に固定し、**非標準ポート公開だと
 `{baseUrl}` のポートが落ちて `redirect_uri` が Google 登録値と食い違う**。
-NAS のリバースプロキシはポートを `X-Forwarded-Host` ではなく **`Host` ヘッダ**
+リバースプロキシによってはポートを `X-Forwarded-Host` ではなく **`Host` ヘッダ**
 (例 `Host: example.me:8443`)でしか伝えてこないため、これが顕在化する。
 これを避けるため `ForwardedRedirectUriResolver` が origin を自前導出する:
 スキーム=`X-Forwarded-Proto`、ホスト=`X-Forwarded-Host`(あれば)→無ければ `Host` ヘッダ。

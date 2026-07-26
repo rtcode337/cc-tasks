@@ -47,7 +47,7 @@ class ForwardedRedirectUriResolverTests {
 
     @Test
     void X_Forwarded_Host_が無ければ_Host_ヘッダのポートを使う() {
-        // 実際の NAS リバースプロキシの挙動: X-Forwarded-Host は送らず、
+        // 実際に遭遇したリバースプロキシの挙動: X-Forwarded-Host は送らず、
         // Host: example.me:7443 と X-Forwarded-Proto: https だけを送ってくる。
         ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
 
