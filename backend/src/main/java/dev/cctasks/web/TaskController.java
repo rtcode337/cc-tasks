@@ -2,16 +2,13 @@ package dev.cctasks.web;
 
 import java.util.List;
 
-import dev.cctasks.note.Note;
-import dev.cctasks.note.NoteAuthor;
 import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskPage;
 import dev.cctasks.task.TaskService;
 import dev.cctasks.task.TaskStatus;
-import dev.cctasks.web.Dtos.CreateNoteRequest;
 import dev.cctasks.web.Dtos.PagedResponse;
 import dev.cctasks.web.Dtos.CreateTaskRequest;
-import dev.cctasks.web.Dtos.NoteResponse;
+import dev.cctasks.web.Dtos.ReorderTasksRequest;
 import dev.cctasks.web.Dtos.TaskDetailResponse;
 import dev.cctasks.web.Dtos.TaskResponse;
 import dev.cctasks.web.Dtos.UpdateTaskRequest;
@@ -23,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -72,9 +70,18 @@ public class TaskController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TaskResponse create(@Valid @RequestBody CreateTaskRequest request) {
-        Task created = taskService.create(request.projectId(), request.title(), request.context(),
-                request.acceptanceCriteria(), request.outOfScope(), request.status());
+        Task created = taskService.create(request.projectId(), request.title(), request.status());
         return TaskResponse.from(created);
+    }
+
+    /**
+     * プロジェクト内の並び替え。ids を望む順で送ると、並び替えた分を返す。
+     * projectId は未紐づけのかたまりなら null。
+     */
+    @PutMapping("/order")
+    public List<TaskResponse> reorder(@Valid @RequestBody ReorderTasksRequest request) {
+        return taskService.reorder(request.projectId(), request.ids()).stream()
+                .map(TaskResponse::from).toList();
     }
 
     @GetMapping("/{id}")
@@ -84,8 +91,7 @@ public class TaskController {
 
     @PatchMapping("/{id}")
     public TaskResponse update(@PathVariable long id, @RequestBody UpdateTaskRequest request) {
-        Task updated = taskService.update(id, request.projectId(), request.title(), request.context(),
-                request.acceptanceCriteria(), request.outOfScope(), request.status());
+        Task updated = taskService.update(id, request.projectId(), request.title(), request.status());
         return TaskResponse.from(updated);
     }
 
@@ -95,11 +101,4 @@ public class TaskController {
         taskService.delete(id);
     }
 
-    /** author は 'human' 固定。Claude Code からの追記は MCP の add_note を使う。 */
-    @PostMapping("/{id}/notes")
-    @ResponseStatus(HttpStatus.CREATED)
-    public NoteResponse addNote(@PathVariable long id, @Valid @RequestBody CreateNoteRequest request) {
-        Note note = taskService.addNote(id, NoteAuthor.HUMAN, request.body());
-        return NoteResponse.from(note);
-    }
 }

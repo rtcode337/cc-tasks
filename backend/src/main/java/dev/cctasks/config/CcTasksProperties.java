@@ -9,8 +9,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record CcTasksProperties(
         /** ログインを許可する Google アカウントのメール (1 件)。 */
         String allowedEmail,
-        /** MCP 用の静的 API キー。 */
-        String mcpApiKey,
         /** 公開 URL (OAuth リダイレクト構築用)。 */
         String publicBaseUrl,
         RateLimit rateLimit) {

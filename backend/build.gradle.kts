@@ -17,23 +17,12 @@ repositories {
     mavenCentral()
 }
 
-extra["springAiVersion"] = "1.1.8"
-
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
-    }
-}
-
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
-
-    // MCP server (Streamable HTTP), 同一アプリに同居
-    implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc")
 
     // 認証失敗のレート制限
     implementation("com.bucket4j:bucket4j-core:8.10.1")

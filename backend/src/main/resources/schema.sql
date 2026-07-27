@@ -1,6 +1,4 @@
--- 仕様書 §5.1 の DDL。起動のたびに流すため IF NOT EXISTS を付けている。
--- notes は tasks 削除時にカスケード削除する(サービス層でも明示削除しているが、
--- DB 側にも制約として持たせて取りこぼしを防ぐ)。
+-- 起動のたびに流すため IF NOT EXISTS を付けている。
 
 CREATE TABLE IF NOT EXISTS projects (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,22 +15,28 @@ CREATE TABLE IF NOT EXISTS tasks (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     -- プロジェクト紐づけは任意。出先でメモだけ放り込み、後から紐づけられる
     project_id          INTEGER REFERENCES projects(id),
+    -- 持つのは「何をやりたいか」だけ。背景・受け入れ条件・スコープ外の列は廃止した
+    -- (既存 DB からは SchemaMigrations が DROP COLUMN で落とす)
     title               TEXT    NOT NULL,
-    context             TEXT,                     -- 背景・現状・動機
-    acceptance_criteria TEXT,                     -- 受け入れ条件
-    out_of_scope        TEXT,                     -- やらないこと
+    -- 未完了(todo)と完了(done)の 2 つだけ
     status              TEXT    NOT NULL DEFAULT 'todo'
-                        CHECK (status IN ('todo', 'in_progress', 'done')),
+                        CHECK (status IN ('todo', 'done')),
+    -- プロジェクト内の手動並び替えの表示順 (昇順)。0 = 未並び替え(新規タスク)で
+    -- グループの先頭に積まれる。既存 DB へは SchemaMigrations が ALTER で追加
+    sort_order          INTEGER NOT NULL DEFAULT 0,
     created_at          TEXT    NOT NULL,
     updated_at          TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status);
 
-CREATE TABLE IF NOT EXISTS notes (
+-- 全 Claude Code 環境に適用したい共通ルール。Markdown 本文を複数持ち、
+-- 表示順(sort_order 昇順)に連結して 1 本のルール集として取り出す。
+CREATE TABLE IF NOT EXISTS rules (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    task_id    INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    author     TEXT    NOT NULL CHECK (author IN ('human', 'claude_code')),
-    body       TEXT    NOT NULL,
-    created_at TEXT    NOT NULL
+    title      TEXT    NOT NULL,                 -- 見出し。連結時に "## <title>" になる
+    body       TEXT    NOT NULL,                 -- 本文 (Markdown)
+    enabled    INTEGER NOT NULL DEFAULT 1,       -- 0/1。外したルールは連結に含めない
+    sort_order INTEGER NOT NULL DEFAULT 0,       -- 手動並び替えの表示順 (昇順)
+    created_at TEXT    NOT NULL,
+    updated_at TEXT    NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_notes_task ON notes(task_id);

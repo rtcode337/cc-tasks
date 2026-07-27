@@ -18,7 +18,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -33,7 +32,6 @@ import org.springframework.util.StringUtils;
  * 仕様書 §6 の実装。
  *
  * <ul>
- *   <li>{@code /mcp} … 静的 API キー。セッションも CSRF も使わない独立チェーン</li>
  *   <li>{@code /api/**} … Google OAuth セッション必須。未認証は 401 (JSON)。
  *       フロントが 401 を見てログイン画面へ誘導する</li>
  *   <li>それ以外 … SPA シェルの配信。ログインは {@code /oauth2/authorization/google} へのリンク</li>
@@ -59,31 +57,11 @@ public class SecurityConfig {
             + "frame-ancestors 'none'";
 
     /**
-     * /mcp は Claude Code 専用。ブラウザセッションとは完全に切り離す。
-     */
-    @Bean
-    @Order(1)
-    SecurityFilterChain mcpFilterChain(HttpSecurity http, CcTasksProperties properties,
-            IpRateLimiter rateLimiter) throws Exception {
-        return http
-                .securityMatcher("/mcp", "/mcp/**")
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .requestCache(RequestCacheConfigurerDisabler::disable)
-                .headers(SecurityConfig::commonHeaders)
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .addFilterBefore(new McpApiKeyFilter(properties.mcpApiKey(), rateLimiter),
-                        UsernamePasswordAuthenticationFilter.class)
-                .build();
-    }
-
-    /**
      * PWA(人間)側。Google OAuth のクレデンシャルが設定されていない場合は
      * oauth2Login を組み立てられないため、/api を 401 のままにして起動だけは通す。
      */
     @Bean
-    @Order(2)
+    @Order(1)
     @Profile("!dev")
     SecurityFilterChain appFilterChain(HttpSecurity http, CcTasksProperties properties,
             IpRateLimiter rateLimiter,
@@ -150,7 +128,7 @@ public class SecurityConfig {
      * 本番では有効化しないこと。
      */
     @Bean
-    @Order(2)
+    @Order(1)
     @Profile("dev")
     SecurityFilterChain devFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -179,14 +157,5 @@ public class SecurityConfig {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.getWriter().write(
                 "{\"error\":{\"code\":\"%s\",\"message\":\"%s\"}}".formatted(code, message));
-    }
-
-    /** {@code requestCache(cache -> cache.disable())} をメソッド参照で書くための小道具。 */
-    private interface RequestCacheConfigurerDisabler {
-
-        static void disable(org.springframework.security.config.annotation.web.configurers
-                .RequestCacheConfigurer<HttpSecurity> cache) {
-            cache.disable();
-        }
     }
 }

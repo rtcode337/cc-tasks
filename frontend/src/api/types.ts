@@ -1,12 +1,5 @@
-export type TaskStatus = 'todo' | 'in_progress' | 'done'
-
-export const TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done']
-
-export const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: '未着手',
-  in_progress: '着手中',
-  done: '完了',
-}
+/** 未完了(todo)と完了(done)の 2 つだけ。wire 値の 'todo' は「未完了」の意味 */
+export type TaskStatus = 'todo' | 'done'
 
 export interface Project {
   id: number
@@ -24,25 +17,34 @@ export interface Task {
   id: number
   projectId: number
   title: string
-  context?: string | null
-  acceptanceCriteria?: string | null
-  outOfScope?: string | null
   status: TaskStatus
+  /** プロジェクト内の手動並び順(昇順)。0 = 未並び替えでグループの先頭 */
+  sortOrder: number
   createdAt: string
   updatedAt: string
 }
 
-export interface Note {
-  id: number
-  taskId: number
-  author: 'human' | 'claude_code'
-  body: string
-  createdAt: string
-}
-
 export interface TaskDetail extends Task {
   projectName: string
-  notes: Note[]
+}
+
+/** すべての Claude Code 環境に効かせたい共通ルールの 1 本。本文は Markdown。 */
+export interface Rule {
+  id: number
+  title: string
+  body: string
+  /** false のルールは連結に含めない */
+  enabled: boolean
+  /** 手動並び替えの表示順(昇順)。連結の順にもなる */
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RuleInput {
+  title?: string
+  body?: string
+  enabled?: boolean
 }
 
 export interface Me {
@@ -62,9 +64,6 @@ export interface Paged<T> {
 export interface TaskInput {
   projectId?: number
   title?: string
-  context?: string | null
-  acceptanceCriteria?: string | null
-  outOfScope?: string | null
   status?: TaskStatus
 }
 

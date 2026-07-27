@@ -1,9 +1,10 @@
 import type {
   Me,
-  Note,
   Paged,
   Project,
   ProjectInput,
+  Rule,
+  RuleInput,
   Task,
   TaskDetail,
   TaskInput,
@@ -95,6 +96,9 @@ export const api = {
   updateProject: (id: number, input: ProjectInput) =>
     request<Project>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
 
+  /** アーカイブ済みのみ。紐づくタスクも一緒に消える。 */
+  deleteProject: (id: number) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
+
   /** 並び替え。全プロジェクトの id を望む順で送ると、並び替え後の全件を返す。 */
   reorderProjects: (ids: number[]) =>
     request<Project[]>('/api/projects/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
@@ -117,6 +121,16 @@ export const api = {
     return request<Paged<Task>>(`/api/tasks?${query}`)
   },
 
+  /**
+   * プロジェクト内の並び替え。ids を望む順で送ると、並び替えた分を返す。
+   * projectId は未紐づけのかたまりなら null。画面に出ている分だけの部分集合でよい。
+   */
+  reorderTasks: (projectId: number | null, ids: number[]) =>
+    request<Task[]>('/api/tasks/order', {
+      method: 'PUT',
+      body: JSON.stringify({ projectId, ids }),
+    }),
+
   getTask: (id: number) => request<TaskDetail>(`/api/tasks/${id}`),
 
   createTask: (input: TaskInput) =>
@@ -127,9 +141,20 @@ export const api = {
 
   deleteTask: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
 
-  addNote: (taskId: number, body: string) =>
-    request<Note>(`/api/tasks/${taskId}/notes`, {
-      method: 'POST',
-      body: JSON.stringify({ body }),
-    }),
+  listRules: () => request<Rule[]>('/api/rules'),
+
+  /** 有効なルールを表示順に連結した 1 本の Markdown。 */
+  combinedRules: () => request<{ markdown: string }>('/api/rules/combined'),
+
+  createRule: (input: RuleInput) =>
+    request<Rule>('/api/rules', { method: 'POST', body: JSON.stringify(input) }),
+
+  updateRule: (id: number, input: RuleInput) =>
+    request<Rule>(`/api/rules/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+
+  deleteRule: (id: number) => request<void>(`/api/rules/${id}`, { method: 'DELETE' }),
+
+  /** 並び替え。全ルールの id を望む順で送ると、並び替え後の全件を返す。 */
+  reorderRules: (ids: number[]) =>
+    request<Rule[]>('/api/rules/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
 }

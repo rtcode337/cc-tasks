@@ -5,7 +5,7 @@
 #   backend  : ./gradlew bootRun (dev プロファイル) + 継続コンパイル
 #              → dev は認証を通さないのでログイン不要。
 #              → ソースを保存して再コンパイルされると devtools が数秒で自動再起動。
-#   frontend : Vite dev server (HMR)。/api と /mcp は backend にプロキシ。
+#   frontend : Vite dev server (HMR)。/api は backend にプロキシ。
 #
 # 開くのは frontend 側: http://localhost:7001
 # Ctrl-C で全部まとめて停止する。

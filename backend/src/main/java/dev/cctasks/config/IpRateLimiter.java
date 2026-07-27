@@ -10,7 +10,7 @@ import io.github.bucket4j.Bucket;
 import org.springframework.stereotype.Component;
 
 /**
- * IP あたりのトークンバケット。ログイン試行と MCP 認証の乱打を抑える(仕様書 §6.3)。
+ * IP あたりのトークンバケット。ログイン試行の乱打を抑える(仕様書 §6.3)。
  * 自分専用アプリなので分散対応は不要、プロセス内メモリで十分。
  */
 @Component

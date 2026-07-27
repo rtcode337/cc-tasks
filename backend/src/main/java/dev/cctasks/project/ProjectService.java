@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import dev.cctasks.task.TaskRepository;
 import dev.cctasks.web.ApiException;
 
 import org.springframework.dao.DuplicateKeyException;
@@ -19,10 +20,14 @@ import org.springframework.util.StringUtils;
 public class ProjectService {
 
     private final ProjectRepository repository;
+    // アーカイブの可否判定と、削除時の巻き添え削除に使う。
+    // TaskService ではなくリポジトリを直接見て bean の循環を避ける
+    private final TaskRepository taskRepository;
     private final Clock clock;
 
-    public ProjectService(ProjectRepository repository, Clock clock) {
+    public ProjectService(ProjectRepository repository, TaskRepository taskRepository, Clock clock) {
         this.repository = repository;
+        this.taskRepository = taskRepository;
         this.clock = clock;
     }
 
@@ -38,12 +43,6 @@ public class ProjectService {
     public Project requireById(long id) {
         return repository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("プロジェクトが見つかりません: id=" + id));
-    }
-
-    @Transactional(readOnly = true)
-    public Project requireByName(String name) {
-        return repository.findByName(name)
-                .orElseThrow(() -> ApiException.notFound("プロジェクトが見つかりません: name=" + name));
     }
 
     @Transactional
@@ -64,12 +63,22 @@ public class ProjectService {
     /**
      * null のフィールドは「変更しない」を意味する部分更新。
      * repoUrls は空リストで「全部消す」。
+     *
+     * <p>アーカイブは **未完了タスクが 0 件のときだけ**通す。片付いていないタスクごと
+     * 一覧から消えると、放り込んだものを取りこぼすため(戻すのはいつでもよい)。
      */
     @Transactional
     public Project update(long id, String name, List<String> repoUrls, String description, Boolean archived) {
         Project current = requireById(id);
         if (name != null) {
             requireNameAvailable(requireName(name), current.id());
+        }
+        if (Boolean.TRUE.equals(archived) && !current.archived()) {
+            long incomplete = taskRepository.countIncompleteByProjectId(current.id());
+            if (incomplete > 0) {
+                throw ApiException.badRequest(
+                        "未完了のタスクが %d 件あるためアーカイブできません: %s".formatted(incomplete, current.name()));
+            }
         }
         Project updated = new Project(
                 current.id(),
@@ -86,6 +95,23 @@ public class ProjectService {
         catch (DuplicateKeyException ex) {
             throw ApiException.conflict("同名のプロジェクトが既にあります: " + updated.name());
         }
+    }
+
+    /**
+     * アーカイブ済みのプロジェクトを、紐づくタスクごと消す。
+     *
+     * <p>アーカイブしていないものは消せない —— アーカイブ自体が「未完了 0 件」を条件にしているので、
+     * 片付いたことを確かめる一段を必ず通させるため。戻せない操作なので入口はここだけにする。
+     */
+    @Transactional
+    public void delete(long id) {
+        Project current = requireById(id);
+        if (!current.archived()) {
+            throw ApiException.badRequest(
+                    "アーカイブしてからでないと削除できません: " + current.name());
+        }
+        taskRepository.deleteByProjectId(current.id());
+        repository.delete(current);
     }
 
     /**

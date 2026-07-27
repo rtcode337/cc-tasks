@@ -41,14 +41,48 @@ export const useProjectStore = defineStore('projects', () => {
     return updated
   }
 
+  /** アーカイブ済みのプロジェクトを、紐づくタスクごと消す。 */
+  async function remove(id: number) {
+    await api.deleteProject(id)
+    all.value = all.value.filter((p) => p.id !== id)
+  }
+
   /** 並び替え。全プロジェクトの id を望む順で渡す。 */
   async function reorder(ids: number[]) {
     all.value = await api.reorderProjects(ids)
+  }
+
+  /**
+   * 画面に出ている分だけの並びを、全体の並びに埋め戻して保存する。
+   * トップは「タスクの残っているアーカイブ済み」だけを混ぜて出すため表示が全件と一致しない。
+   * 出ていないプロジェクトは元の位置に据え置き、出ている分の枠だけを詰め替える。
+   */
+  async function reorderVisible(ordered: Project[]) {
+    const visible = new Set(ordered.map((p) => p.id))
+    const next = [...all.value]
+    let i = 0
+    for (let index = 0; index < next.length; index++) {
+      if (visible.has(next[index].id)) next[index] = ordered[i++]
+    }
+    await reorder(next.map((p) => p.id))
   }
 
   function name(id: number): string {
     return byId.value.get(id)?.name ?? `#${id}`
   }
 
-  return { all, active, byId, loading, loaded, load, create, update, reorder, name }
+  return {
+    all,
+    active,
+    byId,
+    loading,
+    loaded,
+    load,
+    create,
+    update,
+    remove,
+    reorder,
+    reorderVisible,
+    name,
+  }
 })

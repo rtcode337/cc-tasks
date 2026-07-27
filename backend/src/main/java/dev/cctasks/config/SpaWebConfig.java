@@ -16,7 +16,7 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
 /**
  * Vue SPA を Spring の static から配信する。
  * 実ファイルが無いパス(SPA のルーティング先)は index.html にフォールバックさせる。
- * ただし /api と /mcp は素通しして本来のハンドラ・404 に任せる。
+ * ただし /api は素通しして本来のハンドラ・404 に任せる。
  */
 @Configuration(proxyBeanMethods = false)
 public class SpaWebConfig implements WebMvcConfigurer {
@@ -40,7 +40,7 @@ public class SpaWebConfig implements WebMvcConfigurer {
                         if (requested.exists() && requested.isReadable()) {
                             return requested;
                         }
-                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("mcp")) {
+                        if (resourcePath.startsWith("api/")) {
                             return null;
                         }
                         // 拡張子付き(= 資材の取得)で実体が無いなら素直に 404。

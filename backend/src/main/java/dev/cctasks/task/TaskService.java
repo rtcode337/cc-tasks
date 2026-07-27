@@ -3,11 +3,11 @@ package dev.cctasks.task;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
-import dev.cctasks.note.Note;
-import dev.cctasks.note.NoteAuthor;
-import dev.cctasks.note.NoteRepository;
 import dev.cctasks.project.Project;
 import dev.cctasks.project.ProjectService;
 import dev.cctasks.web.ApiException;
@@ -17,20 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * REST(PWA)と MCP(Claude Code)が共有するタスク操作のサービス層。
+ * タスク操作のサービス層。
  */
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
-    private final NoteRepository noteRepository;
     private final ProjectService projectService;
     private final Clock clock;
 
-    public TaskService(TaskRepository taskRepository, NoteRepository noteRepository,
-            ProjectService projectService, Clock clock) {
+    public TaskService(TaskRepository taskRepository, ProjectService projectService, Clock clock) {
         this.taskRepository = taskRepository;
-        this.noteRepository = noteRepository;
         this.projectService = projectService;
         this.clock = clock;
     }
@@ -56,18 +53,6 @@ public class TaskService {
         return new TaskPage(items, total, safePage, safeSize);
     }
 
-    /**
-     * MCP list_tasks 用。status 省略時は done 以外を返す。
-     */
-    @Transactional(readOnly = true)
-    public List<Task> listByProjectName(String projectName, TaskStatus status) {
-        Project project = projectService.requireByName(projectName);
-        if (status == null) {
-            return taskRepository.findOpenByProjectId(project.id());
-        }
-        return taskRepository.search(project.id(), status.wireValue());
-    }
-
     @Transactional(readOnly = true)
     public Task requireById(long id) {
         return taskRepository.findById(id)
@@ -79,12 +64,11 @@ public class TaskService {
         Task task = requireById(id);
         // 未紐づけなら project は null
         Project project = task.projectId() != null ? projectService.requireById(task.projectId()) : null;
-        return new TaskDetail(task, project, noteRepository.findByTaskIdNewestFirst(id));
+        return new TaskDetail(task, project);
     }
 
     @Transactional
-    public Task create(Long projectId, String title, String context, String acceptanceCriteria,
-            String outOfScope, TaskStatus status) {
+    public Task create(Long projectId, String title, TaskStatus status) {
         // プロジェクト紐づけは任意。指定された場合だけ存在確認する
         if (projectId != null) {
             projectService.requireById(projectId);
@@ -93,9 +77,10 @@ public class TaskService {
             throw ApiException.badRequest("title は必須です");
         }
         Instant now = now();
+        // sortOrder=0 は「並び替えていない」。手動で並べた分 (1..n) より前に来るので
+        // 放り込んだタスクはグループの先頭に積まれる
         return taskRepository.save(new Task(null, projectId, title.trim(),
-                blankToNull(context), blankToNull(acceptanceCriteria), blankToNull(outOfScope),
-                status != null ? status : TaskStatus.TODO, now, now));
+                status != null ? status : TaskStatus.TODO, 0, now, now));
     }
 
     /**
@@ -103,8 +88,7 @@ public class TaskService {
      * 状態遷移に制約は設けない(仕様書 §5.2)。
      */
     @Transactional
-    public Task update(long id, Long projectId, String title, String context,
-            String acceptanceCriteria, String outOfScope, TaskStatus status) {
+    public Task update(long id, Long projectId, String title, TaskStatus status) {
         Task current = requireById(id);
         if (projectId != null) {
             projectService.requireById(projectId);
@@ -116,13 +100,41 @@ public class TaskService {
                 current.id(),
                 projectId != null ? projectId : current.projectId(),
                 title != null ? title.trim() : current.title(),
-                context != null ? blankToNull(context) : current.context(),
-                acceptanceCriteria != null ? blankToNull(acceptanceCriteria) : current.acceptanceCriteria(),
-                outOfScope != null ? blankToNull(outOfScope) : current.outOfScope(),
                 status != null ? status : current.status(),
+                current.sortOrder(),
                 current.createdAt(),
                 now());
         return taskRepository.save(updated);
+    }
+
+    /**
+     * プロジェクト内(未紐づけなら {@code projectId=null} のかたまり)の手動並び替え。
+     * 渡した id へ先頭から 1, 2, 3, … と sort_order を振る。
+     *
+     * <p>画面に出ていないタスクには触らないので ids は部分集合でよい。
+     * ただし別プロジェクトのタスクを混ぜると順序の意味が壊れるため、そこだけは弾く。
+     */
+    @Transactional
+    public List<Task> reorder(Long projectId, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw ApiException.badRequest("ids は必須です");
+        }
+        if (new HashSet<>(ids).size() != ids.size()) {
+            throw ApiException.badRequest("ids に重複があります");
+        }
+        List<Task> reordered = new ArrayList<>(ids.size());
+        for (int i = 0; i < ids.size(); i++) {
+            Task task = requireById(ids.get(i));
+            if (!Objects.equals(task.projectId(), projectId)) {
+                throw ApiException.badRequest(
+                        "別のプロジェクトのタスクは同時に並び替えできません: id=" + task.id());
+            }
+            int sortOrder = i + 1;
+            taskRepository.updateSortOrder(task.id(), sortOrder);
+            reordered.add(new Task(task.id(), task.projectId(), task.title(), task.status(),
+                    sortOrder, task.createdAt(), task.updatedAt()));
+        }
+        return reordered;
     }
 
     @Transactional
@@ -130,33 +142,13 @@ public class TaskService {
         if (status == null) {
             throw ApiException.badRequest("status は必須です");
         }
-        return update(id, null, null, null, null, null, status);
+        return update(id, null, null, status);
     }
 
-    /** 物理削除。notes もカスケード削除する(仕様書 §5.2)。 */
+    /** 物理削除。 */
     @Transactional
     public void delete(long id) {
-        Task task = requireById(id);
-        noteRepository.deleteByTaskId(task.id());
-        taskRepository.deleteById(task.id());
-    }
-
-    /** ノートは追記のみ。更新・削除の口は用意しない(仕様書 §5.3)。 */
-    @Transactional
-    public Note addNote(long taskId, NoteAuthor author, String body) {
-        Task task = requireById(taskId);
-        if (!StringUtils.hasText(body)) {
-            throw ApiException.badRequest("body は必須です");
-        }
-        Note note = noteRepository.save(new Note(null, task.id(), author, body, now()));
-        // ノート追記もタスクの「動き」なので updated_at を進める(一覧の並び順に効く)
-        taskRepository.save(new Task(task.id(), task.projectId(), task.title(), task.context(),
-                task.acceptanceCriteria(), task.outOfScope(), task.status(), task.createdAt(), now()));
-        return note;
-    }
-
-    private static String blankToNull(String value) {
-        return StringUtils.hasText(value) ? value : null;
+        taskRepository.deleteById(requireById(id).id());
     }
 
     private Instant now() {

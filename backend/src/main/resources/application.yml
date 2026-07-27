@@ -24,27 +24,6 @@ spring:
   # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET から組み立てる。
   # (空文字を置くと Spring Boot の検証で落ちるため、ここには書かない)
 
-  ai:
-    mcp:
-      server:
-        enabled: true
-        name: cc-tasks
-        version: 0.1.0
-        instructions: >
-          Claude Code に依頼するタスクの待ち行列。作業を始める前に list_tasks で
-          対象プロジェクトの残タスクを確認し、get_task で詳細をプロンプトとして取得する。
-          着手時と完了時に update_task_status を呼び、セッションを終える前に必ず
-          add_note で進捗と引き継ぎ事項を書き戻すこと。
-        protocol: STREAMABLE
-        # SSE / stdio は使わない(仕様書 §4)
-        streamable-http:
-          mcp-endpoint: /mcp
-        capabilities:
-          tool: true
-          resource: false
-          prompt: false
-          completion: false
-
   jackson:
     default-property-inclusion: non_null
 
@@ -90,8 +69,6 @@ server:
 cctasks:
   # ログインを許可する Google アカウント (1 件のみ)
   allowed-email: ${ALLOWED_EMAIL:}
-  # MCP 用の静的 API キー
-  mcp-api-key: ${MCP_API_KEY:}
   # 公開 URL。OAuth リダイレクト構築に使う (リバースプロキシ配下での絶対 URL)
   public-base-url: ${PUBLIC_BASE_URL:}
   rate-limit:

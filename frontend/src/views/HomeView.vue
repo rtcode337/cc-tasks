@@ -4,10 +4,12 @@ import { RouterLink } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { usePullToRefresh } from '@/lib/pullToRefresh'
-import CopyButton from '@/components/CopyButton.vue'
-import ClaudeCodeButton from '@/components/ClaudeCodeButton.vue'
+import { buildTaskGroups, withUnlinkedGroup } from '@/lib/groups'
 import ErrorBanner from '@/components/ErrorBanner.vue'
-import type { Task } from '@/api/types'
+import ProjectFormModal from '@/components/ProjectFormModal.vue'
+import ProjectGroups from '@/components/ProjectGroups.vue'
+import TaskFormModal from '@/components/TaskFormModal.vue'
+import type { Project, Task } from '@/api/types'
 
 const tasks = useTaskStore()
 const projects = useProjectStore()
@@ -15,83 +17,45 @@ const projects = useProjectStore()
 // 下に引っ張ったら一覧を取り直す
 usePullToRefresh(() => Promise.all([projects.load(true), tasks.load(true)]))
 
-// 未着手一覧のプロジェクトごとの折りたたみ。デフォルトは閉じた状態で、
-// 開いたグループだけをブラウザに永続化する
-const EXPANDED_KEY = 'cc-tasks-home-expanded'
-
-interface TaskGroup {
-  key: string
-  name: string
-  tasks: Task[]
-  /** false = 常に展開(未紐づけ用)。ヘッダも開閉ボタンにしない */
-  collapsible: boolean
-}
-
-function loadExpanded(): Set<string> {
-  try {
-    const raw = localStorage.getItem(EXPANDED_KEY)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
-  } catch {
-    return new Set()
-  }
-}
-
-const expanded = ref(loadExpanded())
-
-function toggleGroup(key: string) {
-  const next = new Set(expanded.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  expanded.value = next
-  try {
-    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...next]))
-  } catch {
-    // 保存できなくてもその場の開閉は効くので握りつぶす
-  }
-}
-
-/**
- * 未着手をプロジェクトごとにまとめる。先頭は未紐づけ(常に展開)、
- * 続いてプロジェクトの並び順(プロジェクト画面で並び替えた順)。
- * グループ内は todo の並びのまま作成日時降順。
- */
-const groups = computed<TaskGroup[]>(() => {
-  const byProject = new Map<number, Task[]>()
-  const unlinked: Task[] = []
-  for (const task of tasks.todo) {
-    if (task.projectId == null) {
-      unlinked.push(task)
-    } else {
-      const list = byProject.get(task.projectId)
-      if (list) list.push(task)
-      else byProject.set(task.projectId, [task])
-    }
-  }
-
-  const result: TaskGroup[] = []
-  if (unlinked.length > 0) {
-    result.push({ key: 'none', name: '未紐づけ', tasks: unlinked, collapsible: false })
-  }
-  // アーカイブ済みプロジェクトのタスクも表示するため all(並び順どおり)を使う
-  for (const p of projects.all) {
-    const list = byProject.get(p.id)
-    if (list) {
-      result.push({ key: `p${p.id}`, name: p.name, tasks: list, collapsible: true })
-      byProject.delete(p.id)
-    }
-  }
-  // プロジェクト一覧の読み込み前などの取りこぼし
-  for (const [projectId, list] of byProject) {
-    result.push({ key: `p${projectId}`, name: `#${projectId}`, tasks: list, collapsible: true })
-  }
-  return result
-})
+// アーカイブ済みはここには出さない。/archived で見る。
+// プロジェクト未設定のタスクは「未分類」として末尾にまとまる
+const projectGroups = computed(() =>
+  withUnlinkedGroup(
+    buildTaskGroups(
+      tasks.todo,
+      projects.all.filter((p) => !p.archived),
+    ),
+    tasks.todo,
+  ),
+)
 
 const error = ref<string | null>(null)
 const memo = ref('')
 // null = プロジェクトに紐づけない
 const projectId = ref<number | null>(null)
 const saving = ref(false)
+
+// プロジェクトの作成・編集はこの画面から行う(専用画面は持たない)
+const projectModalOpen = ref(false)
+/** null = 新規作成 */
+const editingProject = ref<Project | null>(null)
+
+function openCreateProject() {
+  editingProject.value = null
+  projectModalOpen.value = true
+}
+
+function openEditProject(project: Project) {
+  editingProject.value = project
+  projectModalOpen.value = true
+}
+
+// タスクの編集はカードを押してモーダルで(専用画面は持たない)
+const editingTask = ref<Task | null>(null)
+
+function openEditTask(task: Task) {
+  editingTask.value = task
+}
 
 onMounted(async () => {
   try {
@@ -116,16 +80,6 @@ async function save() {
     saving.value = false
   }
 }
-
-async function complete(id: number) {
-  error.value = null
-  try {
-    await tasks.complete(id)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  }
-}
-
 </script>
 
 <template>
@@ -149,57 +103,40 @@ async function complete(id: number) {
           {{ saving ? '保存中…' : '保存' }}
         </button>
       </div>
-      <RouterLink to="/tasks/new" class="entry__detail">受け入れ条件などを詳しく書く →</RouterLink>
     </form>
 
-    <!-- 未着手のタスク(作成日時降順) -->
+    <!-- 未完了のタスク -->
     <section class="list">
       <h2 class="list__title">
-        未着手 <span class="list__count">{{ tasks.todo.length }}</span>
+        未完了 <span class="list__count">{{ tasks.todo.length }}</span>
+        <button type="button" class="list__add" @click="openCreateProject">＋ プロジェクト</button>
       </h2>
 
-      <p v-if="tasks.loading" class="muted">読み込み中…</p>
-      <p v-else-if="tasks.todo.length === 0" class="muted">タスクはまだありません。</p>
+      <!-- プロジェクトが未読込のあいだに出すと紐づき済みのタスクが消えて見えるので両方待つ -->
+      <p v-if="tasks.loading || projects.loading" class="muted">読み込み中…</p>
+      <p v-else-if="projectGroups.length === 0" class="muted">タスクはまだありません。</p>
 
-      <div v-else class="groups">
-        <section v-for="group in groups" :key="group.key" class="group">
-          <!-- 未紐づけ (collapsible=false) は見出しを出さず、常に展開してそのまま並べる -->
-          <button
-            v-if="group.collapsible"
-            type="button"
-            class="group__header"
-            :aria-expanded="expanded.has(group.key)"
-            @click="toggleGroup(group.key)"
-          >
-            <span class="group__chevron" :class="{ 'group__chevron--open': expanded.has(group.key) }">▸</span>
-            <span class="group__name">{{ group.name }}</span>
-            <span class="group__count">{{ group.tasks.length }}</span>
-          </button>
+      <ProjectGroups
+        v-else
+        :groups="projectGroups"
+        @edit="openEditProject"
+        @edit-task="openEditTask"
+        @error="error = $event"
+      />
 
-          <ul v-show="!group.collapsible || expanded.has(group.key)" class="cards">
-            <li v-for="task in group.tasks" :key="task.id" class="card">
-              <div class="card__body">
-                <RouterLink :to="`/tasks/${task.id}`" class="card__memo">{{ task.title }}</RouterLink>
-                <span class="card__tools">
-                  <CopyButton icon :text="task.title" />
-                  <ClaudeCodeButton
-                    :task="task"
-                    :repo-urls="task.projectId ? projects.byId.get(task.projectId)?.repoUrls : undefined"
-                  />
-                </span>
-              </div>
-              <div class="card__foot">
-                <span class="card__buttons">
-                  <!-- 削除はタスク編集画面から。誤タップしやすい一覧には置かない -->
-                  <RouterLink :to="`/tasks/${task.id}/edit`" class="btn btn--edit">編集</RouterLink>
-                  <button type="button" class="btn btn--done" @click="complete(task.id)">完了</button>
-                </span>
-              </div>
-            </li>
-          </ul>
-        </section>
+      <div class="foot">
+        <RouterLink to="/archived" class="foot__link">アーカイブしたプロジェクト →</RouterLink>
+        <RouterLink to="/done" class="foot__link">完了したタスク →</RouterLink>
       </div>
     </section>
+
+    <ProjectFormModal
+      v-if="projectModalOpen"
+      :project="editingProject"
+      @close="projectModalOpen = false"
+    />
+
+    <TaskFormModal v-if="editingTask" :task="editingTask" @close="editingTask = null" />
   </section>
 </template>
 
@@ -226,13 +163,6 @@ async function complete(id: number) {
   flex-shrink: 0;
 }
 
-.entry__detail {
-  display: inline-block;
-  margin-top: 0.625rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
 .list__title {
   display: flex;
   align-items: center;
@@ -248,117 +178,9 @@ async function complete(id: number) {
   color: var(--muted-dim);
 }
 
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.group__header {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  width: 100%;
-  margin: 0 0 0.375rem;
-  padding: 0.25rem 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  text-align: left;
-}
-
-.group__header:hover .group__name {
-  color: var(--text);
-}
-
-.group__chevron {
-  display: inline-block;
-  transition: transform 0.15s ease;
-  color: var(--muted-dim);
-}
-
-.group__chevron--open {
-  transform: rotate(90deg);
-}
-
-.group__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.group__count {
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  color: var(--muted-dim);
-}
-
-.cards {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.card {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  padding: 0.75rem;
-}
-
-.card__body {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.625rem;
-}
-
-.card__memo,
-.card__memo:visited {
-  display: block;
-  flex: 1;
-  min-width: 0;
-  color: var(--text);
-  text-decoration: none;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding-top: 0.1875rem;
-}
-
-.card__tools {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.card__memo:hover {
-  color: var(--accent);
-}
-
-.card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.625rem;
-}
-
-.card__buttons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.btn {
+/* 新規プロジェクトは見出しの右端から */
+.list__add {
+  margin-left: auto;
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -366,24 +188,34 @@ async function complete(id: number) {
   color: var(--muted);
   font-size: 0.75rem;
   font-family: inherit;
+  font-weight: 400;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.btn--done:hover {
-  color: var(--badge-done-text);
-  border-color: var(--badge-done-text);
+.list__add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
-.btn--edit,
-.btn--edit:visited {
-  color: var(--muted);
+/* 一番下。左はアーカイブを戻す唯一の導線、右は完了したタスク */
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.foot__link,
+.foot__link:visited {
+  color: var(--muted-dim);
+  font-size: 0.75rem;
   text-decoration: none;
 }
 
-.btn--edit:hover {
+.foot__link:hover {
   color: var(--accent);
-  border-color: var(--accent);
 }
 
 .muted {

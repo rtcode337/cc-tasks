@@ -11,8 +11,8 @@ export default defineConfig({
       // アプリシェルだけを precache する。データは常にオンラインから取る
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
-        // /api と /mcp は network-only (仕様書 §8: データの陳腐化防止)
-        navigateFallbackDenylist: [/^\/api\//, /^\/mcp/, /^\/oauth2\//, /^\/login\//],
+        // /api は network-only (仕様書 §8: データの陳腐化防止)
+        navigateFallbackDenylist: [/^\/api\//, /^\/oauth2\//, /^\/login\//],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
@@ -55,7 +55,6 @@ export default defineConfig({
     // 本番はオリジン 1 個なのでプロキシも CORS も不要 (仕様書 §3)
     proxy: {
       '/api': { target: 'http://localhost:7000', changeOrigin: false },
-      '/mcp': { target: 'http://localhost:7000', changeOrigin: false },
       '/oauth2': { target: 'http://localhost:7000', changeOrigin: false },
       '/login': { target: 'http://localhost:7000', changeOrigin: false },
     },

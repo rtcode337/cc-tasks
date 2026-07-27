@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import dev.cctasks.note.NoteAuthor;
 import dev.cctasks.task.TaskStatus;
 
 import org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration;
@@ -36,8 +35,6 @@ public class JdbcConfig extends AbstractJdbcConfiguration {
                 StringToInstantConverter.INSTANCE,
                 TaskStatusToStringConverter.INSTANCE,
                 StringToTaskStatusConverter.INSTANCE,
-                NoteAuthorToStringConverter.INSTANCE,
-                StringToNoteAuthorConverter.INSTANCE,
                 BooleanToIntegerConverter.INSTANCE,
                 IntegerToBooleanConverter.INSTANCE);
     }
@@ -112,23 +109,4 @@ public class JdbcConfig extends AbstractJdbcConfiguration {
         }
     }
 
-    @WritingConverter
-    enum NoteAuthorToStringConverter implements Converter<NoteAuthor, String> {
-        INSTANCE;
-
-        @Override
-        public String convert(NoteAuthor source) {
-            return source.wireValue();
-        }
-    }
-
-    @ReadingConverter
-    enum StringToNoteAuthorConverter implements Converter<String, NoteAuthor> {
-        INSTANCE;
-
-        @Override
-        public NoteAuthor convert(String source) {
-            return NoteAuthor.from(source);
-        }
-    }
 }

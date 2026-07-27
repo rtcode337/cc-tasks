@@ -50,8 +50,7 @@ public class WriteWarmup {
             // WAL への書き込みは実際に発生するので、ディスク側の初回コストも払える
             transactionTemplate.executeWithoutResult(status -> {
                 Instant now = clock.instant().truncatedTo(ChronoUnit.MILLIS);
-                Task saved = taskRepository.save(new Task(null, null, "(warmup)",
-                        null, null, null, TaskStatus.TODO, now, now));
+                Task saved = taskRepository.save(new Task(null, null, "(warmup)", TaskStatus.TODO, 0, now, now));
                 taskRepository.deleteById(saved.id());
             });
             log.info("書き込み経路をウォームアップしました ({} ms)",

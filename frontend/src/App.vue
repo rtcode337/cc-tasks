@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { currentRefreshHandler } from '@/lib/pullToRefresh'
+import { isDragActive } from '@/lib/dragSort'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import AppHeader from '@/components/AppHeader.vue'
 
@@ -32,6 +33,12 @@ function onTouchStart(e: TouchEvent) {
 
 function onTouchMove(e: TouchEvent) {
   if (!tracking) return
+  // 長押しからの並び替え中は指を下に動かすので、引っ張り更新と食い合う。並び替えを優先する
+  if (isDragActive()) {
+    tracking = false
+    pull.value = 0
+    return
+  }
   if (window.scrollY > 0) {
     tracking = false
     pull.value = 0

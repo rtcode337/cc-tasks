@@ -1,4 +1,4 @@
-# ローカル開発用 (M1/M2)。認証を通さずに REST/MCP を叩けるようにする。
+# ローカル開発用。認証を通さずに REST を叩けるようにする。
 # 本番でこのプロファイルを有効にしないこと。
 spring:
   datasource:
@@ -10,10 +10,6 @@ server:
       cookie:
         # ローカルは HTTP なので Secure を外さないとセッションが載らない
         secure: false
-
-cctasks:
-  # dev では MCP も固定キーで検証できるようにしておく (LAN 内前提)
-  mcp-api-key: ${MCP_API_KEY:dev-local-key}
 
 logging:
   level:

@@ -16,7 +16,6 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID を .env に設定してください}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET を .env に設定してください}
       ALLOWED_EMAIL: ${ALLOWED_EMAIL:?ログインを許可するメールアドレスを .env に設定してください}
-      MCP_API_KEY: ${MCP_API_KEY:?MCP 用 API キーを .env に設定してください}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
       DB_PATH: /data/cctasks.db
       TZ: Asia/Tokyo

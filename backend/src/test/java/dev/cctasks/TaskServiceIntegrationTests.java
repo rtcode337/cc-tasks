@@ -4,11 +4,10 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
-import dev.cctasks.note.Note;
-import dev.cctasks.note.NoteAuthor;
-import dev.cctasks.note.NoteRepository;
 import dev.cctasks.project.Project;
 import dev.cctasks.project.ProjectService;
+import dev.cctasks.rule.Rule;
+import dev.cctasks.rule.RuleService;
 import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskService;
 import dev.cctasks.task.TaskStatus;
@@ -47,7 +46,7 @@ class TaskServiceIntegrationTests {
     TaskService taskService;
 
     @Autowired
-    NoteRepository noteRepository;
+    RuleService ruleService;
 
     @Autowired
     JdbcTemplate jdbc;
@@ -80,67 +79,33 @@ class TaskServiceIntegrationTests {
     @Test
     void statusはDDLのCHECK制約と同じ表記で保存される() {
         Project project = projectService.create("sample-project", null, null);
-        Task task = taskService.create(project.id(), "並び替え機能の実装", null, null, null, null);
+        Task task = taskService.create(project.id(), "並び替え機能の実装", null);
 
         assertThat(task.status()).isEqualTo(TaskStatus.TODO);
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
                 .isEqualTo("todo");
 
-        taskService.updateStatus(task.id(), TaskStatus.IN_PROGRESS);
+        taskService.updateStatus(task.id(), TaskStatus.DONE);
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
-                .isEqualTo("in_progress");
+                .isEqualTo("done");
+
+        // 完了から未完了へ戻せる(遷移に制約は設けない)
+        taskService.updateStatus(task.id(), TaskStatus.TODO);
+        assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
+                .isEqualTo("todo");
     }
 
     @Test
     void 部分更新は指定しなかった項目を変えない() {
         Project project = projectService.create("sample-project", null, null);
-        Task task = taskService.create(project.id(), "元のタイトル", "元のコンテキスト", "元の条件", null, null);
+        Task task = taskService.create(project.id(), "元のタイトル", null);
 
-        Task updated = taskService.update(task.id(), null, null, null, null, null, TaskStatus.DONE);
+        Task updated = taskService.update(task.id(), null, null, TaskStatus.DONE);
 
         assertThat(updated.title()).isEqualTo("元のタイトル");
-        assertThat(updated.context()).isEqualTo("元のコンテキスト");
-        assertThat(updated.acceptanceCriteria()).isEqualTo("元の条件");
+        assertThat(updated.projectId()).isEqualTo(project.id());
         assertThat(updated.status()).isEqualTo(TaskStatus.DONE);
         assertThat(updated.createdAt()).isEqualTo(task.createdAt());
-    }
-
-    @Test
-    void ノートは新しい順に並ぶ() {
-        Project project = projectService.create("sample-project", null, null);
-        Task task = taskService.create(project.id(), "タスク", null, null, null, null);
-
-        taskService.addNote(task.id(), NoteAuthor.HUMAN, "1 件目");
-        taskService.addNote(task.id(), NoteAuthor.CLAUDE_CODE, "2 件目");
-
-        List<Note> notes = noteRepository.findByTaskIdNewestFirst(task.id());
-        assertThat(notes).extracting(Note::body).containsExactly("2 件目", "1 件目");
-        assertThat(notes.get(0).author()).isEqualTo(NoteAuthor.CLAUDE_CODE);
-    }
-
-    @Test
-    void タスク削除でノートも消える() {
-        Project project = projectService.create("sample-project", null, null);
-        Task task = taskService.create(project.id(), "タスク", null, null, null, null);
-        taskService.addNote(task.id(), NoteAuthor.HUMAN, "メモ");
-
-        taskService.delete(task.id());
-
-        assertThat(noteRepository.findByTaskIdNewestFirst(task.id())).isEmpty();
-        assertThatThrownBy(() -> taskService.requireById(task.id())).isInstanceOf(ApiException.class);
-    }
-
-    @Test
-    void MCPのlist_tasksはstatus省略時にdoneを除く() {
-        Project project = projectService.create("sample-project", null, null);
-        Task open = taskService.create(project.id(), "残っている", null, null, null, null);
-        Task closed = taskService.create(project.id(), "終わった", null, null, null, null);
-        taskService.updateStatus(closed.id(), TaskStatus.DONE);
-
-        assertThat(taskService.listByProjectName("sample-project", null))
-                .extracting(Task::id).containsExactly(open.id());
-        assertThat(taskService.listByProjectName("sample-project", TaskStatus.DONE))
-                .extracting(Task::id).containsExactly(closed.id());
     }
 
     @Test
@@ -148,11 +113,11 @@ class TaskServiceIntegrationTests {
         Project project = projectService.create("sample-project", null, null);
         // done を 12 件、todo を 2 件
         for (int i = 0; i < 12; i++) {
-            Task t = taskService.create(project.id(), "完了 " + i, null, null, null, null);
+            Task t = taskService.create(project.id(), "完了 " + i, null);
             taskService.updateStatus(t.id(), TaskStatus.DONE);
         }
-        taskService.create(project.id(), "未完了 A", null, null, null, null);
-        taskService.create(project.id(), "未完了 B", null, null, null, null);
+        taskService.create(project.id(), "未完了 A", null);
+        taskService.create(project.id(), "未完了 B", null);
 
         // 未完了(active)には done が出ない
         assertThat(taskService.listActive(null)).hasSize(2)
@@ -166,6 +131,137 @@ class TaskServiceIntegrationTests {
         assertThat(page1.items()).hasSize(2);
         // 全 done が status=done であること
         assertThat(page0.items()).allSatisfy(t -> assertThat(t.status()).isEqualTo(TaskStatus.DONE));
+    }
+
+    @Test
+    void プロジェクト内のタスクは手動で並び替えられる() {
+        Project project = projectService.create("sample-project", null, null);
+        Task a = taskService.create(project.id(), "A", null);
+        Task b = taskService.create(project.id(), "B", null);
+        Task c = taskService.create(project.id(), "C", null);
+
+        // 並び替える前は新しい順
+        assertThat(taskService.listActive(project.id()))
+                .extracting(Task::title).containsExactly("C", "B", "A");
+
+        taskService.reorder(project.id(), List.of(a.id(), c.id(), b.id()));
+        assertThat(taskService.listActive(project.id()))
+                .extracting(Task::title).containsExactly("A", "C", "B");
+
+        // 新しく放り込んだタスクは sortOrder=0 なので並び替え済み (1..n) より前に積まれる
+        taskService.create(project.id(), "D", null);
+        assertThat(taskService.listActive(project.id()))
+                .extracting(Task::title).containsExactly("D", "A", "C", "B");
+
+        // 編集しても並び順は動かない
+        taskService.update(a.id(), null, "A(改題)", null);
+        assertThat(taskService.listActive(project.id()))
+                .extracting(Task::title).containsExactly("D", "A(改題)", "C", "B");
+    }
+
+    @Test
+    void 未紐づけタスクも並び替えでき別プロジェクト混在は400になる() {
+        Task a = taskService.create(null, "A", null);
+        Task b = taskService.create(null, "B", null);
+
+        assertThat(taskService.reorder(null, List.of(b.id(), a.id())))
+                .extracting(Task::sortOrder).containsExactly(1, 2);
+        assertThat(jdbc.queryForObject("SELECT sort_order FROM tasks WHERE id = ?", Integer.class, b.id()))
+                .isEqualTo(1);
+
+        // 紐づいたタスクを未紐づけのかたまりに混ぜることはできない
+        Project project = projectService.create("sample-project", null, null);
+        Task linked = taskService.create(project.id(), "紐づき", null);
+        assertThatThrownBy(() -> taskService.reorder(null, List.of(a.id(), linked.id())))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
+    }
+
+    @Test
+    void 未完了が残っているプロジェクトはアーカイブできない() {
+        Project project = projectService.create("sample-project", null, null);
+        Task task = taskService.create(project.id(), "残っている", null);
+
+        assertThatThrownBy(() -> projectService.update(project.id(), null, null, null, true))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
+
+        // 片付ければ通る
+        taskService.updateStatus(task.id(), TaskStatus.DONE);
+        assertThat(projectService.update(project.id(), null, null, null, true).archived()).isTrue();
+
+        // 戻すのはいつでもよい
+        assertThat(projectService.update(project.id(), null, null, null, false).archived()).isFalse();
+    }
+
+    @Test
+    void プロジェクトはアーカイブ済みのときだけタスクごと削除できる() {
+        Project project = projectService.create("sample-project", null, null);
+        Task todo = taskService.create(project.id(), "未完了のまま", null);
+        Task done = taskService.create(project.id(), "片付いた", null);
+        taskService.updateStatus(done.id(), TaskStatus.DONE);
+
+        // アーカイブ前は消せない
+        assertThatThrownBy(() -> projectService.delete(project.id()))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
+
+        taskService.updateStatus(todo.id(), TaskStatus.DONE);
+        projectService.update(project.id(), null, null, null, true);
+        projectService.delete(project.id());
+
+        assertThat(projectService.list(null)).noneMatch(p -> p.id().equals(project.id()));
+        // 完了済みも含めて巻き添えで消える
+        assertThat(taskService.search(null, null)).noneMatch(t -> t.projectId() != null
+                && t.projectId().equals(project.id()));
+    }
+
+    @Test
+    void ルールは表示順に連結され無効なものは含まれない() {
+        Rule first = ruleService.create("コミットの作法", "- main に直接 push しない", null);
+        Rule second = ruleService.create("テスト", "- 変更したら必ずテストを走らせる", null);
+        Rule off = ruleService.create("下書き", "まだ有効にしていない", false);
+
+        assertThat(ruleService.combined()).isEqualTo("""
+                ## コミットの作法
+
+                - main に直接 push しない
+
+                ## テスト
+
+                - 変更したら必ずテストを走らせる
+                """);
+
+        // 並び替えると連結順も入れ替わる
+        ruleService.reorder(List.of(second.id(), off.id(), first.id()));
+        assertThat(ruleService.combined()).startsWith("## テスト").endsWith("- main に直接 push しない\n");
+
+        // 有効にすれば連結に入る
+        ruleService.update(off.id(), null, null, true);
+        assertThat(ruleService.combined()).contains("## 下書き");
+
+        // 1 本も有効でなければ空文字
+        for (Rule rule : ruleService.list()) {
+            ruleService.update(rule.id(), null, null, false);
+        }
+        assertThat(ruleService.combined()).isEmpty();
+    }
+
+    @Test
+    void ルールの部分更新と削除() {
+        Rule rule = ruleService.create("見出し", "本文", null);
+
+        // null のフィールドは変更しない
+        Rule renamed = ruleService.update(rule.id(), "新しい見出し", null, null);
+        assertThat(renamed.title()).isEqualTo("新しい見出し");
+        assertThat(renamed.body()).isEqualTo("本文");
+        assertThat(renamed.enabled()).isTrue();
+
+        ruleService.delete(rule.id());
+        assertThat(ruleService.list()).isEmpty();
+        assertThatThrownBy(() -> ruleService.requireById(rule.id()))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(404));
     }
 
     @Test
@@ -203,12 +299,12 @@ class TaskServiceIntegrationTests {
 
     @Test
     void プロジェクト無しでタスクを作成し後から紐づけできる() {
-        Task memo = taskService.create(null, "出先で思いついたメモ", null, null, null, null);
+        Task memo = taskService.create(null, "出先で思いついたメモ", null);
         assertThat(memo.projectId()).isNull();
         assertThat(taskService.detail(memo.id()).project()).isNull();
 
         Project project = projectService.create("sample-project", null, null);
-        Task linked = taskService.update(memo.id(), project.id(), null, null, null, null, null);
+        Task linked = taskService.update(memo.id(), project.id(), null, null);
 
         assertThat(linked.projectId()).isEqualTo(project.id());
         assertThat(taskService.detail(memo.id()).project().name()).isEqualTo("sample-project");
@@ -216,7 +312,7 @@ class TaskServiceIntegrationTests {
 
     @Test
     void 存在しないプロジェクトへのタスク作成は404になる() {
-        assertThatThrownBy(() -> taskService.create(9999L, "タスク", null, null, null, null))
+        assertThatThrownBy(() -> taskService.create(9999L, "タスク", null))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(404));
     }

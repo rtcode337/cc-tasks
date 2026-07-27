@@ -6,13 +6,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * タスクのライフサイクル。todo → in_progress → done。
- * 遷移に制約は設けない(任意の状態から任意の状態へ変更可)。
+ * タスクの状態。未完了(todo)と完了(done)の 2 つだけ。
+ * 遷移に制約は設けない(完了から未完了へ戻せる)。
+ *
+ * <p>2026-07 に「着手中(in_progress)」を廃止した。wire 値の {@code todo} は
+ * 「未着手」ではなく「未完了」の意味になっている(既存 DB との互換のため名前は据え置き)。
  */
 public enum TaskStatus {
 
+    /** 未完了。 */
     TODO("todo"),
-    IN_PROGRESS("in_progress"),
     DONE("done");
 
     private final String wireValue;
@@ -35,6 +38,6 @@ public enum TaskStatus {
                 .filter(s -> s.wireValue.equalsIgnoreCase(value) || s.name().equalsIgnoreCase(value))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "status は todo / in_progress / done のいずれかを指定してください: " + value));
+                        "status は todo / done のいずれかを指定してください: " + value));
     }
 }

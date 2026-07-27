@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import dev.cctasks.note.Note;
 import dev.cctasks.project.Project;
+import dev.cctasks.rule.Rule;
 import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskDetail;
 import dev.cctasks.task.TaskStatus;
@@ -70,16 +70,14 @@ public final class Dtos {
             Long id,
             Long projectId,
             String title,
-            String context,
-            String acceptanceCriteria,
-            String outOfScope,
             TaskStatus status,
+            int sortOrder,
             Instant createdAt,
             Instant updatedAt) {
 
         public static TaskResponse from(Task t) {
-            return new TaskResponse(t.id(), t.projectId(), t.title(), t.context(),
-                    t.acceptanceCriteria(), t.outOfScope(), t.status(), t.createdAt(), t.updatedAt());
+            return new TaskResponse(t.id(), t.projectId(), t.title(), t.status(), t.sortOrder(),
+                    t.createdAt(), t.updatedAt());
         }
     }
 
@@ -88,40 +86,72 @@ public final class Dtos {
             Long projectId,
             String projectName,
             String title,
-            String context,
-            String acceptanceCriteria,
-            String outOfScope,
             TaskStatus status,
             Instant createdAt,
-            Instant updatedAt,
-            List<NoteResponse> notes) {
+            Instant updatedAt) {
 
         public static TaskDetailResponse from(TaskDetail d) {
             Task t = d.task();
             return new TaskDetailResponse(t.id(), t.projectId(),
-                    d.project() != null ? d.project().name() : null, t.title(),
-                    t.context(), t.acceptanceCriteria(), t.outOfScope(), t.status(),
-                    t.createdAt(), t.updatedAt(),
-                    d.notes().stream().map(NoteResponse::from).toList());
+                    d.project() != null ? d.project().name() : null, t.title(), t.status(),
+                    t.createdAt(), t.updatedAt());
         }
     }
 
     public record CreateTaskRequest(
             @JsonAlias("project_id") Long projectId,
             @NotBlank(message = "は必須です") String title,
-            String context,
-            @JsonAlias("acceptance_criteria") String acceptanceCriteria,
-            @JsonAlias("out_of_scope") String outOfScope,
             TaskStatus status) {
+    }
+
+    /**
+     * プロジェクト内の並び替え。ids を望む順で送る。
+     * projectId は未紐づけのかたまりなら null。ids は画面に出ている分だけの部分集合でよい。
+     */
+    public record ReorderTasksRequest(
+            @JsonAlias("project_id") Long projectId,
+            @NotEmpty List<Long> ids) {
     }
 
     public record UpdateTaskRequest(
             @JsonAlias("project_id") Long projectId,
             String title,
-            String context,
-            @JsonAlias("acceptance_criteria") String acceptanceCriteria,
-            @JsonAlias("out_of_scope") String outOfScope,
             TaskStatus status) {
+    }
+
+    // --- rules ---
+
+    public record RuleResponse(
+            Long id,
+            String title,
+            String body,
+            boolean enabled,
+            int sortOrder,
+            Instant createdAt,
+            Instant updatedAt) {
+
+        public static RuleResponse from(Rule r) {
+            return new RuleResponse(r.id(), r.title(), r.body(), r.enabled(), r.sortOrder(),
+                    r.createdAt(), r.updatedAt());
+        }
+    }
+
+    /** 有効なルールを連結した 1 本の Markdown。 */
+    public record CombinedRulesResponse(String markdown) {
+    }
+
+    public record CreateRuleRequest(
+            @NotBlank(message = "は必須です") String title,
+            @NotBlank(message = "は必須です") String body,
+            Boolean enabled) {
+    }
+
+    /** null のフィールドは「変更しない」。 */
+    public record UpdateRuleRequest(String title, String body, Boolean enabled) {
+    }
+
+    /** 並び替え。全ルールの id を望む順で過不足なく指定する。 */
+    public record ReorderRulesRequest(@NotEmpty List<Long> ids) {
     }
 
     public record PagedResponse<T>(List<T> items, long total, int page, int size, int totalPages) {
@@ -131,15 +161,4 @@ public final class Dtos {
         }
     }
 
-    // --- notes ---
-
-    public record NoteResponse(Long id, Long taskId, String author, String body, Instant createdAt) {
-
-        public static NoteResponse from(Note n) {
-            return new NoteResponse(n.id(), n.taskId(), n.author().wireValue(), n.body(), n.createdAt());
-        }
-    }
-
-    public record CreateNoteRequest(@NotBlank(message = "は必須です") String body) {
-    }
 }
