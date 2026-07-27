@@ -113,6 +113,10 @@ public final class Dtos {
             @NotEmpty List<Long> ids) {
     }
 
+    /**
+     * null のフィールドは「変更しない」。
+     * projectId は 0({@code TaskService.UNLINK_PROJECT_ID})を送ると紐づけを外す。
+     */
     public record UpdateTaskRequest(
             @JsonAlias("project_id") Long projectId,
             String title,

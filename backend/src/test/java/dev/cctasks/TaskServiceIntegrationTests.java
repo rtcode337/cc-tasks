@@ -311,6 +311,21 @@ class TaskServiceIntegrationTests {
     }
 
     @Test
+    void プロジェクトの紐づけを外して未分類に戻せる() {
+        Project project = projectService.create("sample-project", null, null);
+        Task task = taskService.create(project.id(), "紐づけ済みのタスク", null);
+
+        // null は「変更しない」なので外れない
+        assertThat(taskService.update(task.id(), null, "改題", null).projectId())
+                .isEqualTo(project.id());
+
+        Task unlinked = taskService.update(task.id(), TaskService.UNLINK_PROJECT_ID, null, null);
+
+        assertThat(unlinked.projectId()).isNull();
+        assertThat(taskService.detail(task.id()).project()).isNull();
+    }
+
+    @Test
     void 存在しないプロジェクトへのタスク作成は404になる() {
         assertThatThrownBy(() -> taskService.create(9999L, "タスク", null))
                 .isInstanceOf(ApiException.class)

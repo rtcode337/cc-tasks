@@ -13,9 +13,13 @@ export interface Project {
   updatedAt: string
 }
 
+/** 更新時に projectId へこれを送ると紐づけを外す(未分類に戻す)。null は「変更しない」 */
+export const UNLINK_PROJECT_ID = 0
+
 export interface Task {
   id: number
-  projectId: number
+  /** 未分類(どのプロジェクトにも紐づいていない)なら欠落する(JSON は null を落とす設定) */
+  projectId?: number | null
   title: string
   status: TaskStatus
   /** プロジェクト内の手動並び順(昇順)。0 = 未並び替えでグループの先頭 */
@@ -25,7 +29,8 @@ export interface Task {
 }
 
 export interface TaskDetail extends Task {
-  projectName: string
+  /** 未分類なら欠落する */
+  projectName?: string
 }
 
 /** すべての Claude Code 環境に効かせたい共通ルールの 1 本。本文は Markdown。 */
@@ -62,6 +67,7 @@ export interface Paged<T> {
 }
 
 export interface TaskInput {
+  /** 更新では undefined = 変更しない、{@link UNLINK_PROJECT_ID}(0) = 紐づけを外す */
   projectId?: number
   title?: string
   status?: TaskStatus

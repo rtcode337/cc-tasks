@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { UNLINK_PROJECT_ID } from '@/api/types'
 import type { Task } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
@@ -31,8 +32,8 @@ async function save() {
   try {
     // status は送らない(「変更しない」扱い)。完了/未完了はカードのボタンで切り替える
     await tasks.update(props.task.id, {
-      // プロジェクトは任意。未選択(null)ならそのまま送る
-      projectId: form.projectId ?? undefined,
+      // 「プロジェクトなし」は 0 で送る。undefined(= 未指定)だと「変更しない」になり紐づけが外れない
+      projectId: form.projectId ?? UNLINK_PROJECT_ID,
       title: form.title.trim(),
     })
     emit('close')

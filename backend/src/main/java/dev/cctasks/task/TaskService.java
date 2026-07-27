@@ -22,6 +22,13 @@ import org.springframework.util.StringUtils;
 @Service
 public class TaskService {
 
+    /**
+     * 更新で projectId にこれ(0)を送ると紐づけを外す(未分類に戻す)。
+     * null は「変更しない」の意味なので、外す指示をそれと分けるための値。
+     * プロジェクトの id は 1 から振られるので実在の id とはぶつからない。
+     */
+    public static final long UNLINK_PROJECT_ID = 0L;
+
     private final TaskRepository taskRepository;
     private final ProjectService projectService;
     private final Clock clock;
@@ -86,11 +93,15 @@ public class TaskService {
     /**
      * null のフィールドは「変更しない」を意味する部分更新。
      * 状態遷移に制約は設けない(仕様書 §5.2)。
+     *
+     * <p>projectId だけは「変更しない」と「紐づけを外す」を分ける必要があるので、
+     * {@link #UNLINK_PROJECT_ID} を送ったときだけ未分類に戻す。
      */
     @Transactional
     public Task update(long id, Long projectId, String title, TaskStatus status) {
         Task current = requireById(id);
-        if (projectId != null) {
+        boolean unlink = projectId != null && projectId == UNLINK_PROJECT_ID;
+        if (projectId != null && !unlink) {
             projectService.requireById(projectId);
         }
         if (title != null && !StringUtils.hasText(title)) {
@@ -98,7 +109,7 @@ public class TaskService {
         }
         Task updated = new Task(
                 current.id(),
-                projectId != null ? projectId : current.projectId(),
+                unlink ? null : (projectId != null ? projectId : current.projectId()),
                 title != null ? title.trim() : current.title(),
                 status != null ? status : current.status(),
                 current.sortOrder(),

@@ -125,8 +125,8 @@ async function save() {
       />
 
       <div class="foot">
-        <RouterLink to="/archived" class="foot__link">アーカイブしたプロジェクト →</RouterLink>
         <RouterLink to="/done" class="foot__link">完了したタスク →</RouterLink>
+        <RouterLink to="/archived" class="foot__link">アーカイブしたプロジェクト →</RouterLink>
       </div>
     </section>
 
@@ -198,7 +198,7 @@ async function save() {
   border-color: var(--accent);
 }
 
-/* 一番下。左はアーカイブを戻す唯一の導線、右は完了したタスク */
+/* 一番下。左は完了したタスク、右はアーカイブを戻す唯一の導線 */
 .foot {
   display: flex;
   justify-content: space-between;
