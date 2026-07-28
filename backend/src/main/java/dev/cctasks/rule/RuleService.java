@@ -33,6 +33,29 @@ public class RuleService {
             以下は特定リポジトリの説明ではなく、作業対象のすべてのリポジトリに適用する共通ルール。
             """;
 
+    /**
+     * 前置きの直後に自動で付ける「規約リポジトリ自体の扱い」ルール。
+     * 規約リポジトリは各ユーザーが自分用に作る配布専用のプライベートリポジトリで、
+     * 育てる対象ではない。セッションにサブリポジトリとして含まれるため、放っておくと
+     * タスクのついでに CLAUDE.md を書き換えられかねない —— それを止め、更新は
+     * ユーザーの明示的な指示(Markdown を渡す/cc-tasks サーバーの URL を渡す)が
+     * あったときに限ることを Claude Code に伝える。自動付与にする理由は前置きと同じ。
+     */
+    public static final String COMBINED_REPO_RULE = """
+            ## 規約リポジトリの扱い
+
+            この CLAUDE.md が置かれているリポジトリ(規約リポジトリ)は、共通ルールを
+            Claude Code のセッションに読み込ませるための置き場であって、開発対象ではない。
+            読み取り専用として扱い、**自動では更新しない**(タスクのついでにこの CLAUDE.md を
+            直したり、このリポジトリへコミット・push したりしない)。
+            更新するのは、ユーザーが明示的に指示したときだけ:
+
+            - 更新後の Markdown を渡されて「この内容で規約を更新して」と言われたとき
+            - cc-tasks サーバーの URL を渡されて「ここから規約を取得して更新して」と言われたとき
+
+            どちらの場合も、渡された(取得した)内容で CLAUDE.md を丸ごと置き換える。
+            """;
+
     private final RuleRepository repository;
     private final SettingRepository settings;
     private final Clock clock;
@@ -56,7 +79,8 @@ public class RuleService {
 
     /**
      * 有効なルールを表示順に 1 本の Markdown へ連結する。
-     * 先頭に {@link #COMBINED_PREAMBLE}(適用範囲の前置き)を付け、
+     * 先頭に {@link #COMBINED_PREAMBLE}(適用範囲の前置き)と
+     * {@link #COMBINED_REPO_RULE}(規約リポジトリ自体は自動更新しない)を付け、
      * 各ルールは {@code ## <title>} の見出しを付けて並べる —— 貼り付け先で
      * どこからどこまでが 1 ルールかを読み手(と Claude)が判別できるようにするため。
      * 有効なルールが 1 本も無ければ前置きも付けず空文字を返す。
@@ -67,7 +91,7 @@ public class RuleService {
                 .filter(Rule::enabled)
                 .map(rule -> "## " + rule.title() + "\n\n" + rule.body().strip() + "\n")
                 .collect(Collectors.joining("\n"));
-        return rules.isEmpty() ? "" : COMBINED_PREAMBLE + "\n" + rules;
+        return rules.isEmpty() ? "" : COMBINED_PREAMBLE + "\n" + COMBINED_REPO_RULE + "\n" + rules;
     }
 
     @Transactional

@@ -222,8 +222,9 @@ class TaskServiceIntegrationTests {
         Rule second = ruleService.create("テスト", "- 変更したら必ずテストを走らせる", null);
         Rule off = ruleService.create("下書き", "まだ有効にしていない", false);
 
-        // 先頭に適用範囲の前置きが自動で付く
-        assertThat(ruleService.combined()).isEqualTo(RuleService.COMBINED_PREAMBLE + """
+        // 先頭に適用範囲の前置きと「規約リポジトリの扱い」ルールが自動で付く
+        assertThat(ruleService.combined()).isEqualTo(
+                RuleService.COMBINED_PREAMBLE + "\n" + RuleService.COMBINED_REPO_RULE + """
 
                 ## コミットの作法
 
@@ -234,10 +235,11 @@ class TaskServiceIntegrationTests {
                 - 変更したら必ずテストを走らせる
                 """);
 
-        // 並び替えると連結順も入れ替わる(前置きは先頭のまま)
+        // 並び替えると連結順も入れ替わる(前置きと規約リポジトリの扱いは先頭のまま)
         ruleService.reorder(List.of(second.id(), off.id(), first.id()));
         String reordered = ruleService.combined();
-        assertThat(reordered).startsWith(RuleService.COMBINED_PREAMBLE + "\n## テスト")
+        assertThat(reordered)
+                .startsWith(RuleService.COMBINED_PREAMBLE + "\n" + RuleService.COMBINED_REPO_RULE + "\n## テスト")
                 .endsWith("- main に直接 push しない\n");
 
         // 有効にすれば連結に入る
