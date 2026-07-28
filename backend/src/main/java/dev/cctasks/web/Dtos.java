@@ -158,6 +158,14 @@ public final class Dtos {
     public record ReorderRulesRequest(@NotEmpty List<Long> ids) {
     }
 
+    /** ルール画面の設定。rulesRepoUrl(規約リポジトリ)は未設定なら null。 */
+    public record RuleSettingsResponse(String rulesRepoUrl) {
+    }
+
+    /** rulesRepoUrl は null で「変更しない」、空文字で「消す」。 */
+    public record UpdateRuleSettingsRequest(@JsonAlias("rules_repo_url") String rulesRepoUrl) {
+    }
+
     public record PagedResponse<T>(List<T> items, long total, int page, int size, int totalPages) {
 
         public PagedResponse(List<T> items, long total, int page, int size) {

@@ -29,6 +29,15 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status);
 
+-- アプリ全体のキーバリュー設定。行が無い = 未設定。
+-- 現状はルール機能の規約リポジトリ (rules_repo_url) だけが使う。
+-- 新規テーブルは IF NOT EXISTS が既存 DB にもそのまま効くので SchemaMigrations は不要
+CREATE TABLE IF NOT EXISTS settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT NOT NULL                      -- ISO 8601 (UTC)
+);
+
 -- 全 Claude Code 環境に適用したい共通ルール。Markdown 本文を複数持ち、
 -- 表示順(sort_order 昇順)に連結して 1 本のルール集として取り出す。
 CREATE TABLE IF NOT EXISTS rules (

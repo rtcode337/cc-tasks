@@ -52,6 +52,12 @@ export interface RuleInput {
   enabled?: boolean
 }
 
+/** ルール画面の設定。規約リポジトリは連結ルールを CLAUDE.md として置く先で、✳ ハンドオフに常に含める */
+export interface RuleSettings {
+  /** GitHub URL か owner/repo スラッグ。未設定なら欠落/null */
+  rulesRepoUrl?: string | null
+}
+
 export interface Me {
   email: string
   name?: string | null

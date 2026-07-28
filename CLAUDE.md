@@ -270,7 +270,8 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
   `x-safari-https://…`(非公式スキーム、iOS 17+)にして Safari 本体で開かせている。
   効かなくなったら素の URL に戻す。URL 組み立ては `frontend/src/lib/claudeCode.ts`。
   `repositories` はプロジェクトのリポジトリ URL のうち GitHub のみ `owner/repo` スラッグに
-  変換して付与し、プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
+  変換して付与し(規約リポジトリが設定されていればそれも常に足す。§ルール機能)、
+  プロンプトは約 4,500 文字で切り詰める(Web 版のプリフィル上限 5,000 文字対策)
 - 下に引っ張って更新: PWA にはリロード手段が無いため App.vue がタッチジェスチャを検知し、
   ビューが `usePullToRefresh`(`frontend/src/lib/pullToRefresh.ts`)で登録した再読込処理を呼ぶ。
   未登録の画面はページ全体のリロードにフォールバック
@@ -294,10 +295,23 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - **並び順がそのまま連結順**。並び替えはプロジェクト/タスクと同じ長押しドラッグ
 - モーダルは Markdown をレンダリングせず `<pre>` で素のまま出す。**貼り付けるのは
   Markdown そのものだから**。整形して見せると何をコピーしているのか分からなくなる
+- **規約リポジトリ**をルール画面の一覧の下で設定できる(`GET/PATCH /api/rules/settings`、
+  値は GitHub URL か `owner/repo` スラッグ。PATCH は規約どおり null=変更しない・空文字=消す)。
+  設定すると ✳ ハンドオフの `repositories` に**常に**付与される(`claudeCodeUrl` の第 3 引数。
+  `repoSlug()` で正規化し、プロジェクトのリポジトリと重複すれば足さない)——
+  Web 版のセッションに含まれたリポジトリは**ルート直下の CLAUDE.md が読み込まれる**ので、
+  連結ルールをそのリポジトリの CLAUDE.md に置いておけば ✳ 経由の全セッションに共通ルールが効く
+  (プライマリでないリポジトリの `.claude/rules/` は読まれる保証が無いのでルート直下に置く)。
+  保存先は汎用 KV の `settings` テーブル(行が無い = 未設定)。Spring Data JDBC は
+  文字列主キーの upsert と相性が悪い(save が常に UPDATE 扱い)ため、
+  ここだけ `SettingRepository` が JdbcTemplate で直接書く。フロントは
+  `stores/rules.ts` の `loadSettings()`(✳ を出すカードごとに呼ばれるので
+  in-flight を共有して 1 リクエストにまとめる)
 
 配信は**手でコピーする**。CLI 版なら `~/.claude/rules/cc-tasks.md`(マシン上の全リポジトリに効く)、
-Web 版はユーザーレベル設定がクラウドセッションに引き継がれないためリポジトリごとに
-`.claude/rules/cc-tasks.md` を置く。自動配信(フックや `GET /api/rules.md` の
+Web 版はユーザーレベル設定がクラウドセッションに引き継がれないため、
+**規約リポジトリ(上記)の CLAUDE.md に連結ルールを貼って ✳ 経由でセッションに含める**か、
+リポジトリごとに `.claude/rules/cc-tasks.md` を置く。自動配信(フックや `GET /api/rules.md` の
 API キー認証エンドポイント)は**まだ作っていない**。必要になってから足す。
 
 ルールは指示であって強制ではない —— CLAUDE.md と同じくシステムプロンプトの後の

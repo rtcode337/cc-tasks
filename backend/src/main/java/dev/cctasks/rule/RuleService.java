@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import dev.cctasks.setting.SettingRepository;
 import dev.cctasks.web.ApiException;
 
 import org.springframework.stereotype.Service;
@@ -17,11 +18,16 @@ import org.springframework.util.StringUtils;
 @Service
 public class RuleService {
 
+    /** settings テーブルのキー。規約リポジトリ(連結ルールを CLAUDE.md として置く先)の URL/スラッグ */
+    static final String RULES_REPO_URL_KEY = "rules_repo_url";
+
     private final RuleRepository repository;
+    private final SettingRepository settings;
     private final Clock clock;
 
-    public RuleService(RuleRepository repository, Clock clock) {
+    public RuleService(RuleRepository repository, SettingRepository settings, Clock clock) {
         this.repository = repository;
+        this.settings = settings;
         this.clock = clock;
     }
 
@@ -92,6 +98,29 @@ public class RuleService {
             repository.updateSortOrder(ids.get(i), i + 1);
         }
         return repository.findAllOrdered();
+    }
+
+    /** 規約リポジトリ。未設定なら null。 */
+    @Transactional(readOnly = true)
+    public String rulesRepoUrl() {
+        return settings.find(RULES_REPO_URL_KEY).orElse(null);
+    }
+
+    /**
+     * 規約リポジトリの更新。PATCH の規約どおり null は「変更しない」、
+     * 空文字(空白のみ含む)は「消す」。更新後の値を返す。
+     */
+    @Transactional
+    public String updateRulesRepoUrl(String value) {
+        if (value != null) {
+            String trimmed = value.trim();
+            if (trimmed.isEmpty()) {
+                settings.delete(RULES_REPO_URL_KEY);
+            } else {
+                settings.upsert(RULES_REPO_URL_KEY, trimmed, now());
+            }
+        }
+        return rulesRepoUrl();
     }
 
     private static String requireTitle(String title) {
