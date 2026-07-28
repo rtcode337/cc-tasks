@@ -210,7 +210,13 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
           <CopyButton icon :text="combined" label="ルール全文をコピー" />
         </div>
         <p v-if="combined === ''" class="muted">有効なルールがありません。</p>
-        <pre v-else class="combined">{{ combined }}</pre>
+        <template v-else>
+          <p class="modal__hint">
+            コピーして、規約リポジトリの CLAUDE.md に丸ごと貼り替える(✳ で開くセッションに効く)か、
+            CLI 版なら <code>~/.claude/rules/cc-tasks.md</code> を作って貼る(そのマシンの全リポジトリに効く)。
+          </p>
+          <pre class="combined">{{ combined }}</pre>
+        </template>
         <div class="actions">
           <button type="button" class="button button--ghost" @click="combinedOpen = false">
             閉じる
@@ -485,6 +491,18 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
 .modal__title {
   margin: 0;
   font-size: 1rem;
+}
+
+/* 貼り先の説明。コピーした Markdown をどこへ置くか迷わないように */
+.modal__hint {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: var(--muted-dim);
+}
+
+.modal__hint code {
+  font-size: 0.6875rem;
 }
 
 /* 貼り付ける素の Markdown。整形せずそのまま出す */

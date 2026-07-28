@@ -306,7 +306,9 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - `enabled=false` のルールは連結に含めない。消さずに一時的に外せる
 - **並び順がそのまま連結順**。並び替えはプロジェクト/タスクと同じ長押しドラッグ
 - モーダルは Markdown をレンダリングせず `<pre>` で素のまま出す。**貼り付けるのは
-  Markdown そのものだから**。整形して見せると何をコピーしているのか分からなくなる
+  Markdown そのものだから**。整形して見せると何をコピーしているのか分からなくなる。
+  本文の上に貼り先の説明(規約リポジトリの CLAUDE.md に丸ごと貼り替えるか、
+  CLI 版なら `~/.claude/rules/cc-tasks.md`)を添えて、コピー後に迷わないようにする
 - **規約リポジトリ**をルール画面の一覧の下で設定できる(`GET/PATCH /api/rules/settings`、
   値は GitHub URL か `owner/repo` スラッグ。PATCH は規約どおり null=変更しない・空文字=消す)。
   設定すると ✳ ハンドオフの `repositories` に**常に**付与される(`claudeCodeUrl` の第 3 引数。
