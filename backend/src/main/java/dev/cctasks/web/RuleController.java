@@ -8,7 +8,9 @@ import dev.cctasks.web.Dtos.CombinedRulesResponse;
 import dev.cctasks.web.Dtos.CreateRuleRequest;
 import dev.cctasks.web.Dtos.ReorderRulesRequest;
 import dev.cctasks.web.Dtos.RuleResponse;
+import dev.cctasks.web.Dtos.RuleSettingsResponse;
 import dev.cctasks.web.Dtos.UpdateRuleRequest;
+import dev.cctasks.web.Dtos.UpdateRuleSettingsRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -46,6 +48,18 @@ public class RuleController {
     @GetMapping("/combined")
     public CombinedRulesResponse combined() {
         return new CombinedRulesResponse(ruleService.combined());
+    }
+
+    /** ルール画面の設定。規約リポジトリ(連結ルールを CLAUDE.md として置く先)。 */
+    @GetMapping("/settings")
+    public RuleSettingsResponse settings() {
+        return new RuleSettingsResponse(ruleService.rulesRepoUrl());
+    }
+
+    /** rulesRepoUrl は null で「変更しない」、空文字で「消す」。 */
+    @PatchMapping("/settings")
+    public RuleSettingsResponse updateSettings(@RequestBody UpdateRuleSettingsRequest request) {
+        return new RuleSettingsResponse(ruleService.updateRulesRepoUrl(request.rulesRepoUrl()));
     }
 
     @PostMapping

@@ -5,6 +5,7 @@ import type {
   ProjectInput,
   Rule,
   RuleInput,
+  RuleSettings,
   Task,
   TaskDetail,
   TaskInput,
@@ -157,4 +158,10 @@ export const api = {
   /** 並び替え。全ルールの id を望む順で送ると、並び替え後の全件を返す。 */
   reorderRules: (ids: number[]) =>
     request<Rule[]>('/api/rules/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+
+  ruleSettings: () => request<RuleSettings>('/api/rules/settings'),
+
+  /** rulesRepoUrl は空文字で「消す」(null は「変更しない」)。 */
+  updateRuleSettings: (input: RuleSettings) =>
+    request<RuleSettings>('/api/rules/settings', { method: 'PATCH', body: JSON.stringify(input) }),
 }

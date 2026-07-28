@@ -18,7 +18,7 @@ const projects = useProjectStore()
 usePullToRefresh(() => Promise.all([projects.load(true), tasks.load(true)]))
 
 // アーカイブ済みはここには出さない。/archived で見る。
-// プロジェクト未設定のタスクは「未分類」として末尾にまとまる
+// プロジェクト未設定のタスクは「未分類」として末尾にまとまる(0 件でも出す)
 const projectGroups = computed(() =>
   withUnlinkedGroup(
     buildTaskGroups(
@@ -26,6 +26,7 @@ const projectGroups = computed(() =>
       projects.all.filter((p) => !p.archived),
     ),
     tasks.todo,
+    true,
   ),
 )
 

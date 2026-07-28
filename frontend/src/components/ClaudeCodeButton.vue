@@ -2,8 +2,14 @@
 import { computed } from 'vue'
 import type { Task } from '@/api/types'
 import { claudeCodeUrl } from '@/lib/claudeCode'
+import { useRuleStore } from '@/stores/rules'
 
 const props = defineProps<{ task: Task; repoUrls?: string[] }>()
+
+// 規約リポジトリを repositories に足すため設定だけ読む(ストア側で同時多発は 1 回にまとまる)。
+// 取れなくても ✳ 自体は使えるので失敗は握りつぶす(未ロードのまま次の表示で再試行される)
+const rules = useRuleStore()
+rules.loadSettings().catch(() => {})
 
 /**
  * iOS のホーム画面追加(スタンドアロン=PWA)で動いているか。
@@ -14,7 +20,7 @@ const isIosStandalone =
   (navigator as unknown as { standalone?: boolean }).standalone === true
 
 const href = computed(() => {
-  const url = claudeCodeUrl(props.task, props.repoUrls)
+  const url = claudeCodeUrl(props.task, props.repoUrls, rules.rulesRepoUrl)
   // iOS の PWA では外部リンクがアプリ内ブラウザで開いてしまう(claude.ai の
   // ログインセッションを共有しない)。非公式だが iOS 17+ の x-safari- スキームで
   // 既定ブラウザの Safari 本体に渡す。効かなくなったら素の URL に戻すこと

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRuleStore } from '@/stores/rules'
 import { usePullToRefresh } from '@/lib/pullToRefresh'
 import { useDragSort } from '@/lib/dragSort'
+import { repoSlug } from '@/lib/claudeCode'
 import type { Rule } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import CopyButton from '@/components/CopyButton.vue'
@@ -15,7 +16,10 @@ import RuleFormModal from '@/components/RuleFormModal.vue'
  */
 const rules = useRuleStore()
 
-usePullToRefresh(() => rules.load(true))
+usePullToRefresh(async () => {
+  await Promise.all([rules.load(true), rules.loadSettings(true)])
+  syncRepoInput()
+})
 
 const error = ref<string | null>(null)
 
@@ -30,11 +34,40 @@ const combining = ref(false)
 
 onMounted(async () => {
   try {
-    await rules.load(true)
+    await Promise.all([rules.load(true), rules.loadSettings(true)])
+    syncRepoInput()
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
 })
+
+// 規約リポジトリ(連結ルールを CLAUDE.md として置く先)。✳ のハンドオフに常に含まれる
+const repoInput = ref('')
+const savingRepo = ref(false)
+const repoDirty = computed(() => repoInput.value.trim() !== (rules.rulesRepoUrl ?? ''))
+
+function syncRepoInput() {
+  repoInput.value = rules.rulesRepoUrl ?? ''
+}
+
+async function saveRepo() {
+  const value = repoInput.value.trim()
+  // 入力があるのに owner/repo に解釈できないなら保存前に弾く(空は「解除」なので通す)
+  if (value !== '' && repoSlug(value) === null) {
+    error.value = '規約リポジトリは GitHub の URL か owner/repo の形で指定してください'
+    return
+  }
+  savingRepo.value = true
+  error.value = null
+  try {
+    await rules.updateRulesRepoUrl(value)
+    syncRepoInput()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    savingRepo.value = false
+  }
+}
 
 function openCreate() {
   editing.value = null
@@ -137,6 +170,35 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
         </div>
       </li>
     </ul>
+
+    <!-- 規約リポジトリ。設定すると ✳ で開くセッションに常に含まれ、
+         そのルート直下の CLAUDE.md(= まとめたルールの置き場)が読み込まれる -->
+    <div class="repo">
+      <label class="repo__label" for="rules-repo">規約リポジトリ</label>
+      <div class="repo__row">
+        <input
+          id="rules-repo"
+          v-model="repoInput"
+          class="repo__input"
+          type="text"
+          placeholder="owner/repo か GitHub の URL"
+          autocomplete="off"
+        />
+        <button
+          type="button"
+          class="button repo__save"
+          :disabled="savingRepo || !repoDirty"
+          @click="saveRepo"
+        >
+          {{ savingRepo ? '保存中…' : '保存' }}
+        </button>
+      </div>
+      <p class="repo__hint">
+        まとめたルールを CLAUDE.md として置いている GitHub リポジトリ。設定すると
+        ✳(Claude Code へのハンドオフ)で開くセッションに常に含まれ、共通ルールが効く。
+        空にして保存すると解除。
+      </p>
+    </div>
 
     <RuleFormModal v-if="modalOpen" :rule="editing" @close="modalOpen = false" />
 
@@ -336,6 +398,57 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
 .toggle input:focus-visible + .toggle__track {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 規約リポジトリの設定。一覧の下に区切って置く */
+.repo {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.repo__label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.repo__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.repo__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.repo__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.repo__save {
+  width: auto;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.repo__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: var(--muted-dim);
 }
 
 .modal {

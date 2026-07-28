@@ -14,6 +14,33 @@ export const useRuleStore = defineStore('rules', () => {
 
   const enabledCount = computed(() => all.value.filter((r) => r.enabled).length)
 
+  // 規約リポジトリ(連結ルールを CLAUDE.md として置く先)。未設定なら null。
+  // ✳ ハンドオフの repositories に常に付与するため、ルール一覧とは別に軽く読める
+  const rulesRepoUrl = ref<string | null>(null)
+  const settingsLoaded = ref(false)
+  let settingsLoading: Promise<void> | null = null
+
+  /** 規約リポジトリ設定を読む。✳ を出すカードごとに呼ばれるので同時多発は 1 回にまとめる */
+  function loadSettings(force = false): Promise<void> {
+    if (settingsLoaded.value && !force) return Promise.resolve()
+    if (settingsLoading && !force) return settingsLoading
+    settingsLoading = (async () => {
+      try {
+        rulesRepoUrl.value = (await api.ruleSettings()).rulesRepoUrl ?? null
+        settingsLoaded.value = true
+      } finally {
+        settingsLoading = null
+      }
+    })()
+    return settingsLoading
+  }
+
+  /** 規約リポジトリの更新。空文字で解除(サーバー側の PATCH 規約と同じ)。 */
+  async function updateRulesRepoUrl(value: string) {
+    rulesRepoUrl.value = (await api.updateRuleSettings({ rulesRepoUrl: value })).rulesRepoUrl ?? null
+    settingsLoaded.value = true
+  }
+
   function sort(list: Rule[]): Rule[] {
     return [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
   }
@@ -57,5 +84,19 @@ export const useRuleStore = defineStore('rules', () => {
     return (await api.combinedRules()).markdown
   }
 
-  return { all, enabledCount, loading, loaded, load, create, update, remove, reorder, combined }
+  return {
+    all,
+    enabledCount,
+    loading,
+    loaded,
+    load,
+    create,
+    update,
+    remove,
+    reorder,
+    combined,
+    rulesRepoUrl,
+    loadSettings,
+    updateRulesRepoUrl,
+  }
 })

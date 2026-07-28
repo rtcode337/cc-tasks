@@ -265,6 +265,26 @@ class TaskServiceIntegrationTests {
     }
 
     @Test
+    void 規約リポジトリは保存と解除ができる() {
+        // 未設定なら null
+        assertThat(ruleService.rulesRepoUrl()).isNull();
+
+        // 前後の空白は落として保存される
+        assertThat(ruleService.updateRulesRepoUrl(" https://github.com/example/rules "))
+                .isEqualTo("https://github.com/example/rules");
+
+        // null は「変更しない」
+        assertThat(ruleService.updateRulesRepoUrl(null)).isEqualTo("https://github.com/example/rules");
+
+        // 上書き(owner/repo スラッグでもよい。解釈はフロント側の仕事)
+        assertThat(ruleService.updateRulesRepoUrl("example/rules")).isEqualTo("example/rules");
+
+        // 空文字は「消す」
+        assertThat(ruleService.updateRulesRepoUrl("  ")).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM settings", Integer.class)).isZero();
+    }
+
+    @Test
     void 同名プロジェクトは409になる() {
         projectService.create("sample-project", null, null);
 
