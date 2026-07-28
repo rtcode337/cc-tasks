@@ -1,14 +1,11 @@
 # cc-tasks
 
-Claude Code に依頼したいタスクをメモ・管理する自分専用 Web アプリ。
+Claude Code に依頼したいタスクをメモ・管理する自分専用 Web アプリ。やりたいことは 2 つだけ:
 
-出先でスマホ(PWA)からタスクを放り込み、帰宅後に Claude Code で消化する。
-あわせて、**すべての Claude Code 環境に効かせたい共通ルール**を 1 箇所で管理し、
-まとめて 1 本の Markdown として取り出せる。
+- **Claude Code への依頼の思いつきをメモで残す** —— 出先でスマホ(PWA)から放り込み、帰宅後に消化する
+- **Claude Code に守らせたいルールを 1 箇所で管理する** —— まとめて 1 本の Markdown として取り出せる
 
-- 画面・操作の仕様(現行): [docs/画面仕様.md](docs/画面仕様.md)
-- 当初の仕様: [docs/仕様書_v0.1.md](docs/仕様書_v0.1.md)
-- 実装メモ・ハマりどころ: [CLAUDE.md](CLAUDE.md)
+設計の詳細(画面・操作、データモデル、API)は [docs/詳細設計.md](docs/詳細設計.md) にまとめてある。
 
 ## 使い方の流れ
 
@@ -36,7 +33,7 @@ Claude Code に依頼したいタスクをメモ・管理する自分専用 Web 
 | プロジェクトを片付ける | 編集モーダルからアーカイブ(**未完了 0 件のときだけ**)。削除はアーカイブ済みのときだけ |
 | 再読み込みする | 画面を**下に引っ張る**(PWA にはリロード手段が無いため) |
 
-画面ごとの詳しい挙動・制約は [docs/画面仕様.md](docs/画面仕様.md) にまとめてある。
+画面ごとの詳しい挙動・制約は [docs/詳細設計.md](docs/詳細設計.md) にまとめてある。
 
 ## スクリーンショット
 
@@ -170,34 +167,7 @@ Google Cloud Console 側の「承認済みのリダイレクト URI」には
 
 ## API
 
-すべて `/api` 配下、JSON、要セッション。エラーは `{"error":{"code":"...","message":"..."}}`。
-
-| メソッド | パス | 説明 |
-|---|---|---|
-| GET | `/api/me` | ログイン中ユーザー |
-| GET | `/api/projects` | プロジェクト一覧 (`?archived=false` が既定、`?archived=` で全件) |
-| POST | `/api/projects` | 作成 |
-| PATCH | `/api/projects/{id}` | 更新 (name, repoUrls, description, archived)。repoUrls は配列(空配列で全消し)。`archived:true` は未完了が 0 件のときだけ通る(残っていれば 400) |
-| DELETE | `/api/projects/{id}` | 削除。**アーカイブ済みのときだけ**通る(未アーカイブなら 400)。紐づくタスクも完了分ごと消える |
-| PUT | `/api/projects/order` | 並び替え。全プロジェクトの id を望む順で送る (`{"ids":[...]}`)。並び替え後の全件を返す |
-| GET | `/api/tasks` | 一覧 (`?projectId=&status=`) |
-| POST | `/api/tasks` | 作成 (projectId は任意) |
-| GET | `/api/tasks?done=false` | 未完了(done 以外)一覧 |
-| PUT | `/api/tasks/order` | プロジェクト内の並び替え。`{"projectId":1,"ids":[...]}` を望む順で送る(未紐づけは `projectId:null`)。画面に出ている分だけの部分集合でよいが、別プロジェクトのタスクを混ぜると 400 |
-| GET | `/api/tasks/{id}` | 詳細 (プロジェクト名込み) |
-| PATCH | `/api/tasks/{id}` | 更新 (projectId, title, status)。null のフィールドは変更しない。**`projectId:0` は「紐づけを外す」**(未分類に戻す) |
-| DELETE | `/api/tasks/{id}` | 削除 |
-| GET | `/api/rules` | ルール一覧 (表示順。無効なものも含む) |
-| GET | `/api/rules/combined` | 有効なルールを表示順に連結した Markdown (`{"markdown":"..."}`)。先頭に適用範囲の前置きと「規約リポジトリの扱い」ルールが付く |
-| POST | `/api/rules` | 作成 (title, body, enabled) |
-| PATCH | `/api/rules/{id}` | 更新 (null のフィールドは変更しない) |
-| DELETE | `/api/rules/{id}` | 削除 |
-| PUT | `/api/rules/order` | 並び替え。全ルールの id を望む順で送る。並び順がそのまま連結順になる |
-| GET | `/api/rules/settings` | ルール画面の設定 (`{"rulesRepoUrl":"..."}`。未設定なら null) |
-| PATCH | `/api/rules/settings` | 規約リポジトリの更新。null は変更しない、空文字で解除 |
-
-JSON は camelCase。リクエストは snake_case (`project_id` 等) でも受け付ける。
-更新系は `X-XSRF-TOKEN` ヘッダが必要(Cookie の `XSRF-TOKEN` をそのまま返す)。
+REST API の一覧と規約は [docs/詳細設計.md](docs/詳細設計.md#4-rest-api) 参照。
 
 ## テスト
 
@@ -205,14 +175,6 @@ JSON は camelCase。リクエストは snake_case (`project_id` 等) でも受�
 cd backend  && ./gradlew test      # SQLite の型変換 / 並び替え / ルールの連結
 cd frontend && npm run typecheck
 ```
-
-## 将来構想
-
-- **✳ ハンドオフの iOS 依存を減らす**: スマホでのプリフィルは「リンク長押し →
-  Safari で開く、を一度やってユニバーサルリンクを無効化」+「PWA では `x-safari-`
-  スキーム(非公式、iOS 17+)で Safari 本体を開く」という iOS の挙動頼みで成立している。
-  Claude モバイルアプリがユニバーサルリンクのクエリ(`prompt` / `repositories`)を
-  引き継ぐようになれば、これらの回避は不要になり素の直リンクに戻せる
 
 ## ライセンス
 
