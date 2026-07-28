@@ -217,12 +217,14 @@ class TaskServiceIntegrationTests {
     }
 
     @Test
-    void ルールは表示順に連結され無効なものは含まれない() {
+    void ルールは前置き付きで表示順に連結され無効なものは含まれない() {
         Rule first = ruleService.create("コミットの作法", "- main に直接 push しない", null);
         Rule second = ruleService.create("テスト", "- 変更したら必ずテストを走らせる", null);
         Rule off = ruleService.create("下書き", "まだ有効にしていない", false);
 
-        assertThat(ruleService.combined()).isEqualTo("""
+        // 先頭に適用範囲の前置きが自動で付く
+        assertThat(ruleService.combined()).isEqualTo(RuleService.COMBINED_PREAMBLE + """
+
                 ## コミットの作法
 
                 - main に直接 push しない
@@ -232,15 +234,17 @@ class TaskServiceIntegrationTests {
                 - 変更したら必ずテストを走らせる
                 """);
 
-        // 並び替えると連結順も入れ替わる
+        // 並び替えると連結順も入れ替わる(前置きは先頭のまま)
         ruleService.reorder(List.of(second.id(), off.id(), first.id()));
-        assertThat(ruleService.combined()).startsWith("## テスト").endsWith("- main に直接 push しない\n");
+        String reordered = ruleService.combined();
+        assertThat(reordered).startsWith(RuleService.COMBINED_PREAMBLE + "\n## テスト")
+                .endsWith("- main に直接 push しない\n");
 
         // 有効にすれば連結に入る
         ruleService.update(off.id(), null, null, true);
         assertThat(ruleService.combined()).contains("## 下書き");
 
-        // 1 本も有効でなければ空文字
+        // 1 本も有効でなければ前置きも付けず空文字
         for (Rule rule : ruleService.list()) {
             ruleService.update(rule.id(), null, null, false);
         }

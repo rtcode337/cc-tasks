@@ -157,7 +157,8 @@ Google Cloud Console 側の「承認済みのリダイレクト URI」には
 
 **ルール**画面で、全環境に効かせたい決まりごとを Markdown で何本でも書ける。
 「まとめて表示」を押すと、有効なルールが表示順に 1 本の Markdown へ連結されるので、
-それをコピーして各環境の指示ファイルに貼る:
+それをコピーして各環境の指示ファイルに貼る(先頭には「特定リポジトリの説明ではなく
+作業対象のすべてのリポジトリに適用する共通ルール」という前置きが自動で付く):
 
 | 環境 | 貼り先 | 有効範囲 |
 |---|---|---|
@@ -195,7 +196,7 @@ Google Cloud Console 側の「承認済みのリダイレクト URI」には
 | PATCH | `/api/tasks/{id}` | 更新 (projectId, title, status)。null のフィールドは変更しない。**`projectId:0` は「紐づけを外す」**(未分類に戻す) |
 | DELETE | `/api/tasks/{id}` | 削除 |
 | GET | `/api/rules` | ルール一覧 (表示順。無効なものも含む) |
-| GET | `/api/rules/combined` | 有効なルールを表示順に連結した Markdown (`{"markdown":"..."}`) |
+| GET | `/api/rules/combined` | 有効なルールを表示順に連結した Markdown (`{"markdown":"..."}`)。先頭に適用範囲の前置きが付く |
 | POST | `/api/rules` | 作成 (title, body, enabled) |
 | PATCH | `/api/rules/{id}` | 更新 (null のフィールドは変更しない) |
 | DELETE | `/api/rules/{id}` | 削除 |

@@ -21,6 +21,18 @@ public class RuleService {
     /** settings テーブルのキー。規約リポジトリ(連結ルールを CLAUDE.md として置く先)の URL/スラッグ */
     static final String RULES_REPO_URL_KEY = "rules_repo_url";
 
+    /**
+     * 連結の先頭に自動で付ける前置き。CLAUDE.md の中身は普通「そのリポジトリ自身の説明」として
+     * 読まれるため、貼り先がどこであれ「作業対象のすべてのリポジトリに効く共通ルール」だと
+     * 明示する。ルールとして登録させないのは、貼り替えのたびに消えたり、並び替えで
+     * 先頭から動いたりしないようにするため。
+     */
+    public static final String COMBINED_PREAMBLE = """
+            # 共通ルール
+
+            以下は特定リポジトリの説明ではなく、作業対象のすべてのリポジトリに適用する共通ルール。
+            """;
+
     private final RuleRepository repository;
     private final SettingRepository settings;
     private final Clock clock;
@@ -44,16 +56,18 @@ public class RuleService {
 
     /**
      * 有効なルールを表示順に 1 本の Markdown へ連結する。
+     * 先頭に {@link #COMBINED_PREAMBLE}(適用範囲の前置き)を付け、
      * 各ルールは {@code ## <title>} の見出しを付けて並べる —— 貼り付け先で
      * どこからどこまでが 1 ルールかを読み手(と Claude)が判別できるようにするため。
-     * 有効なルールが 1 本も無ければ空文字を返す。
+     * 有効なルールが 1 本も無ければ前置きも付けず空文字を返す。
      */
     @Transactional(readOnly = true)
     public String combined() {
-        return repository.findAllOrdered().stream()
+        String rules = repository.findAllOrdered().stream()
                 .filter(Rule::enabled)
                 .map(rule -> "## " + rule.title() + "\n\n" + rule.body().strip() + "\n")
                 .collect(Collectors.joining("\n"));
+        return rules.isEmpty() ? "" : COMBINED_PREAMBLE + "\n" + rules;
     }
 
     @Transactional
