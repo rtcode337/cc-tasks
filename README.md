@@ -40,11 +40,9 @@ Claude Code に依頼したいタスクをメモ・管理する自分専用 Web 
 
 ## スクリーンショット
 
-<img src="docs/images/home.png" alt="トップ(未完了)" height="340">
-<img src="docs/images/task-edit.png" alt="編集モーダル" height="340">
-<img src="docs/images/rules.png" alt="ルール" height="340">
-
-左から **トップ(未完了)** / **編集モーダル** / **ルール**。
+| トップ(未完了) | 編集モーダル | ルール |
+|---|---|---|
+| <img src="docs/images/home.png" alt="トップ(未完了)" height="340"> | <img src="docs/images/task-edit.png" alt="編集モーダル" height="340"> | <img src="docs/images/rules.png" alt="ルール" height="340"> |
 
 <sub>ローカル dev(認証なし)に架空のサンプルデータ(`sample-*`)を入れて撮ったもの。</sub>
 
