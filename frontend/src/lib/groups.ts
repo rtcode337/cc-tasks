@@ -45,10 +45,15 @@ export function buildTaskGroups(todo: Task[], projects: Project[]): TaskGroup[] 
 
 /**
  * どのプロジェクトにも紐づいていないタスクを「未分類」のかたまりにして、一覧の**末尾**に足す。
- * 該当が無ければ足さない —— 空の見出しだけ残っても意味が無いため。
+ * `keepEmpty` を立てると該当 0 件でも足す —— トップでは放り込み先・ドラッグで紐づけを外す先に
+ * なるため常に出す。完了一覧のように「置き場」の意味が無い画面では立てず、0 件なら足さない。
  */
-export function withUnlinkedGroup(groups: TaskGroup[], todo: Task[]): TaskGroup[] {
+export function withUnlinkedGroup(
+  groups: TaskGroup[],
+  todo: Task[],
+  keepEmpty = false,
+): TaskGroup[] {
   const tasks = todo.filter((task) => task.projectId == null).sort(compareInProject)
-  if (tasks.length === 0) return groups
+  if (tasks.length === 0 && !keepEmpty) return groups
   return [...groups, { key: UNLINKED_KEY, project: null, tasks }]
 }
