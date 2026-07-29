@@ -27,6 +27,12 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+  web:
+    error:
+      # Boot 4 で server.error.whitelabel.enabled からこちらへ移動した
+      whitelabel:
+        enabled: false
+
 server:
   port: ${PORT:7000}
   # native (Tomcat の RemoteIpValve) を使う。コネクタレベルで X-Forwarded-*
@@ -43,9 +49,6 @@ server:
     # ログイン成功後に http?://host/ ← ポート無しへ飛ぶ)。相対のままにすればブラウザが
     # 現在の host:port を基準に解決するのでポートが保たれる。既定は false。
     use-relative-redirects: true
-  error:
-    whitelabel:
-      enabled: false
   shutdown: graceful
   servlet:
     session:

@@ -16,7 +16,7 @@ notes も同時に廃止し、`notes` テーブルは `SchemaMigrations` が DRO
 ## 構成
 
 ```
-backend/    Java 21 + Spring Boot 3.5 + Spring Data JDBC + SQLite。REST のみ
+backend/    Java 25 + Spring Boot 4.1 + Spring Data JDBC + SQLite。REST のみ
 frontend/   Vue 3 + Vite + TypeScript + Pinia + vite-plugin-pwa。SPA
 Dockerfile  frontend build → backend build → JRE のマルチステージ。単一コンテナ
 ```

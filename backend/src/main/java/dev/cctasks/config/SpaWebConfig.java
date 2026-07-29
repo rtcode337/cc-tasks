@@ -3,12 +3,14 @@ package dev.cctasks.config;
 import java.io.IOException;
 import java.time.Duration;
 
+import org.springframework.boot.web.server.MimeMappings;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
-import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
@@ -64,9 +66,17 @@ public class SpaWebConfig implements WebMvcConfigurer {
     /**
      * Tomcat の既定に .webmanifest が無く、octet-stream で返ってしまう。
      * それだとブラウザが manifest として読まない。
+     *
+     * <p>Boot 3 までは ContentNegotiationConfigurer の mediaType 登録で静的配信にも
+     * 効いていたが、Boot 4 (Framework 7) では効かなくなったため、
+     * コンテナの MIME マッピングに直接足す。
      */
-    @Override
-    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.mediaType("webmanifest", MediaType.parseMediaType("application/manifest+json"));
+    @Bean
+    WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> webmanifestMimeMapping() {
+        return factory -> {
+            MimeMappings mappings = new MimeMappings(MimeMappings.DEFAULT);
+            mappings.add("webmanifest", "application/manifest+json");
+            factory.setMimeMappings(mappings);
+        };
     }
 }

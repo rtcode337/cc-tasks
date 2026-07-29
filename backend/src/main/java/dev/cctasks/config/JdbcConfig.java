@@ -7,7 +7,6 @@ import java.util.List;
 
 import dev.cctasks.task.TaskStatus;
 
-import org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
@@ -18,7 +17,7 @@ import org.springframework.data.jdbc.repository.config.AbstractJdbcConfiguration
 /**
  * SQLite は日時型も真偽値も持たないため、Java 側の型との橋渡しを明示する。
  *
- * <p>{@link JdbcRepositoriesAutoConfiguration} が用意する構成を継承して
+ * <p>Boot の自動構成が用意する構成({@link AbstractJdbcConfiguration})を継承して
  * カスタムコンバータだけを差し込む。
  */
 @Configuration(proxyBeanMethods = false)

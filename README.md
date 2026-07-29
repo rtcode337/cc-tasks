@@ -47,7 +47,7 @@ Claude Code に依頼したいタスクをメモ・管理する自分専用 Web 
 
 | レイヤ | 技術 |
 |---|---|
-| バックエンド | Java 21 / Spring Boot 3.5 / Spring Data JDBC / SQLite |
+| バックエンド | Java 25 / Spring Boot 4.1 / Spring Data JDBC / SQLite |
 | フロントエンド | Vue 3 / Vite / TypeScript / Pinia / vite-plugin-pwa |
 | 配信 | マルチステージ Docker ビルドで単一コンテナ |
 
