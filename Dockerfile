@@ -13,7 +13,7 @@ RUN npm run build
 
 # ---------- 2. バックエンド ----------
 # Vue のビルド成果物を Spring の static に同梱して、単一 jar にする
-FROM eclipse-temurin:21-jdk-alpine AS backend
+FROM eclipse-temurin:25-jdk-alpine AS backend
 WORKDIR /build
 
 # 依存解決だけ先に済ませてレイヤキャッシュを効かせる
@@ -28,7 +28,7 @@ RUN ./gradlew --no-daemon bootJar -x test \
 
 
 # ---------- 3. 実行 ----------
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:25-jre-alpine AS runtime
 
 # root で動かさない。/data はボリュームマウント先
 RUN addgroup -S app && adduser -S -G app app \
