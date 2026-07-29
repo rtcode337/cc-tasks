@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import { OfflineError } from '@/api/client'
+import { inFlightRequests, onRequestFailure } from '@/lib/network'
 import { currentRefreshHandler } from '@/lib/pullToRefresh'
 import { isDragActive } from '@/lib/dragSort'
 import ErrorBanner from '@/components/ErrorBanner.vue'
@@ -12,6 +14,42 @@ const router = useRouter()
 const route = useRoute()
 const bootError = ref<string | null>(null)
 const offline = ref(!navigator.onLine)
+
+// ---- 通信中オーバーレイ ----
+// 進行中のリクエストがあるあいだ画面全体を覆う。ただし表示は 0.3 秒待ち、
+// すぐ終わる通信では出さない(保存のたびに画面が白く点滅するのを防ぐ)
+const BUSY_DELAY_MS = 300
+const busy = ref(false)
+let busyTimer: number | undefined
+watch(
+  () => inFlightRequests.value > 0,
+  (active) => {
+    window.clearTimeout(busyTimer)
+    if (active) {
+      busyTimer = window.setTimeout(() => (busy.value = true), BUSY_DELAY_MS)
+    } else {
+      busy.value = false
+    }
+  },
+)
+
+// ---- 通信失敗 ----
+// リクエストが届かない・応答が返らないときはダイアログを 1 回出してログイン画面へ戻す。
+// 並行するリクエストが同時に失敗しても連続でダイアログを出さない
+let failureNotified = false
+onRequestFailure(() => {
+  if (failureNotified || route.name === 'login') return
+  failureNotified = true
+  window.alert('サーバーとの通信に失敗しました。ログイン画面に戻ります。')
+  session.reset()
+  void router.replace({ name: 'login' }).finally(() => {
+    failureNotified = false
+  })
+})
+
+// 認証確認(/api/me)が済み、ログイン済みと分かるまで画面を描画しない。
+// 未認証のまま描いてよいのはログイン画面だけ
+const canRender = computed(() => session.checked && (session.me !== null || route.name === 'login'))
 
 // ---- 下に引っ張って更新(PWA にはリロード手段が無いため) ----
 // 指の移動量には減衰(DAMP)を掛けてから pull に入れる。TRIGGER は減衰後の値
@@ -87,7 +125,10 @@ onMounted(async () => {
       await router.replace({ name: 'home' })
     }
   } catch (error) {
-    bootError.value = error instanceof Error ? error.message : String(error)
+    // 通信失敗は onRequestFailure 側でダイアログ→ログイン画面に誘導済みなのでここでは出さない
+    if (!(error instanceof OfflineError)) {
+      bootError.value = error instanceof Error ? error.message : String(error)
+    }
   }
 })
 </script>
@@ -116,9 +157,15 @@ onMounted(async () => {
     <ErrorBanner v-if="offline" kind="warn" message="オフラインです。通信が回復するまで保存できません。" />
     <ErrorBanner v-if="bootError" :message="bootError" />
     <main class="app__main">
-      <RouterView v-if="session.checked" />
+      <RouterView v-if="canRender" />
       <p v-else class="app__loading">読み込み中…</p>
     </main>
+
+    <!-- 通信中は半透明の白で画面全体を覆う(0.3 秒以上かかる通信のみ。操作もブロックする) -->
+    <div v-if="busy" class="busy" role="status" aria-label="通信中">
+      <span class="busy__spinner" aria-hidden="true" />
+      <span class="busy__label">通信中…</span>
+    </div>
   </div>
 </template>
 
@@ -140,6 +187,34 @@ onMounted(async () => {
 .app__loading {
   padding: 2rem 0;
   color: var(--muted);
+}
+
+/* 覆いは白で固定なので、上に載せる色もテーマ変数ではなく明テーマ相当の固定値を使う
+   (暗テーマの文字色は白に近く、白い覆いの上では見えなくなるため) */
+.busy {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.busy__spinner {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #1478c8;
+  border-radius: 50%;
+  animation: ptr-spin 0.7s linear infinite;
+}
+
+.busy__label {
+  color: #3a4654;
+  font-size: 0.875rem;
 }
 
 .ptr {

@@ -11,6 +11,7 @@ import type {
   TaskInput,
   TaskStatus,
 } from './types'
+import { beginRequest, endRequest, notifyRequestFailure } from '@/lib/network'
 
 /** 未認証。呼び出し側はログイン画面へ誘導する。 */
 export class UnauthorizedError extends Error {
@@ -32,13 +33,22 @@ export class ApiError extends Error {
   }
 }
 
-/** オフライン・回線断。オフライン対応はスコープ外なのでバナー表示のみ。 */
+/**
+ * 通信失敗(オフライン・回線断・タイムアウト = リクエストが届かない/応答が返らない)。
+ * client 側で notifyRequestFailure() 済みなので、App.vue がダイアログを出して
+ * ログイン画面へ誘導する。呼び出し側での個別ハンドリングは不要。
+ */
 export class OfflineError extends Error {
   constructor() {
     super('ネットワークに接続できません')
     this.name = 'OfflineError'
   }
 }
+
+// バックエンドが応答を返さないときに通信失敗として扱うまでの時間。
+// 低速なディスクが眠った環境では初回アクセスに十数秒かかることがあるため
+// (CLAUDE.md のウォームアップの項)、短くしすぎない
+const REQUEST_TIMEOUT_MS = 30_000
 
 function readCookie(name: string): string | null {
   const hit = document.cookie.split('; ').find((row) => row.startsWith(`${name}=`))
@@ -56,29 +66,49 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('X-XSRF-TOKEN', csrf)
   }
 
-  let response: Response
+  // 通信中はオーバーレイを出すため、開始と終了を lib/network.ts で数える
+  beginRequest()
   try {
-    response = await fetch(path, { ...init, headers, credentials: 'same-origin' })
-  } catch {
-    throw new OfflineError()
-  }
+    let response: Response
+    try {
+      response = await fetch(path, {
+        ...init,
+        headers,
+        credentials: 'same-origin',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
+    } catch {
+      // fetch の失敗もタイムアウトもまとめて通信失敗。App.vue がログイン画面へ誘導する
+      notifyRequestFailure()
+      throw new OfflineError()
+    }
 
-  if (response.status === 401) {
-    throw new UnauthorizedError()
+    // リバースプロキシ越しだと、バックエンドが落ちていても fetch は成功して
+    // ゲートウェイエラーが返ってくる。これも「応答が返らない」と同じ通信失敗として扱う
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      notifyRequestFailure()
+      throw new OfflineError()
+    }
+
+    if (response.status === 401) {
+      throw new UnauthorizedError()
+    }
+    if (response.status === 204) {
+      return undefined as T
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      const error = body?.error
+      throw new ApiError(
+        response.status,
+        error?.code ?? 'unknown',
+        error?.message ?? `リクエストが失敗しました (${response.status})`,
+      )
+    }
+    return (await response.json()) as T
+  } finally {
+    endRequest()
   }
-  if (response.status === 204) {
-    return undefined as T
-  }
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    const error = body?.error
-    throw new ApiError(
-      response.status,
-      error?.code ?? 'unknown',
-      error?.message ?? `リクエストが失敗しました (${response.status})`,
-    )
-  }
-  return (await response.json()) as T
 }
 
 export const api = {

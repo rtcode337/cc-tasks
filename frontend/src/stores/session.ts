@@ -25,6 +25,15 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  /**
+   * ログイン状態を手元だけ破棄する(サーバーは呼ばない)。
+   * 通信失敗でログイン画面へ戻すときに App.vue が使う。
+   */
+  function reset() {
+    me.value = null
+    checked.value = true
+  }
+
   async function logout() {
     await api.logout().catch(() => undefined)
     me.value = null
@@ -36,5 +45,5 @@ export const useSessionStore = defineStore('session', () => {
     window.location.assign('/oauth2/authorization/google')
   }
 
-  return { me, checked, load, login, logout }
+  return { me, checked, load, reset, login, logout }
 })
