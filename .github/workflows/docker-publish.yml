@@ -56,6 +56,9 @@ jobs:
           target: runtime
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          # フッターのビルド番号用。コンテキストに .git を含めないため SHA はここから渡す
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           # タグではなくダイジェストで push する(マニフェストは merge ジョブで作る)
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=app-${{ matrix.platform }}

@@ -15,6 +15,9 @@ const route = useRoute()
 const bootError = ref<string | null>(null)
 const offline = ref(!navigator.onLine)
 
+// ビルド番号(vite.config.ts の define で注入)。フッターに出す
+const buildNumber = __BUILD_NUMBER__
+
 // ---- 通信中オーバーレイ ----
 // 進行中のリクエストがあるあいだ画面全体を覆う。ただし表示は 0.3 秒待ち、
 // すぐ終わる通信では出さない(保存のたびに画面が白く点滅するのを防ぐ)
@@ -161,6 +164,9 @@ onMounted(async () => {
       <p v-else class="app__loading">読み込み中…</p>
     </main>
 
+    <!-- ビルド番号。SW の旧キャッシュや未更新のイメージを見ていないかをここで見分ける -->
+    <footer class="app__footer">ビルド {{ buildNumber }}</footer>
+
     <!-- 通信中は半透明の白で画面全体を覆う(0.3 秒以上かかる通信のみ。操作もブロックする) -->
     <div v-if="busy" class="busy" role="status" aria-label="通信中">
       <span class="busy__spinner" aria-hidden="true" />
@@ -181,12 +187,25 @@ onMounted(async () => {
   width: 100%;
   max-width: 46rem;
   margin: 0 auto;
-  padding: 0 1rem calc(5rem + env(safe-area-inset-bottom));
+  /* 下端の safe-area はフッター側で確保するので、ここは本文とフッターの間の余白だけ */
+  padding: 0 1rem 4rem;
 }
 
 .app__loading {
   padding: 2rem 0;
   color: var(--muted);
+}
+
+/* フッター: 横線の下にビルド番号。本文と同じ幅で線を揃える */
+.app__footer {
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  color: var(--muted-dim);
+  font-size: 0.6875rem;
+  text-align: center;
 }
 
 /* 覆いは白で固定なので、上に載せる色もテーマ変数ではなく明テーマ相当の固定値を使う
