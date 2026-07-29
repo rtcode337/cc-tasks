@@ -264,8 +264,14 @@ export function useDragSort<T>(
       return
     }
     // ポインタの Y 座標がどの行の中心線より上かで挿入先を決める。
-    // 掴んでいる行は指に追従して変位しているので、レイアウト上の位置に戻して測る
-    const rows = Array.from(state.container.children) as HTMLElement[]
+    // 掴んでいる行は指に追従して変位しているので、レイアウト上の位置に戻して測る。
+    // 見る行はコンテナの先頭から items の数だけに限る —— トップの `.groups` には
+    // 並び替え対象の後ろに対象外の「未分類」グループが同居しており、そこまで数えると
+    // items の範囲外の挿入位置が出て、以降の splice が undefined を混ぜて描画が壊れる
+    const rows = (Array.from(state.container.children) as HTMLElement[]).slice(
+      0,
+      state.items.length,
+    )
     let target = rows.length - 1
     for (let i = 0; i < rows.length; i++) {
       const rect = rows[i].getBoundingClientRect()
