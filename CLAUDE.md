@@ -144,7 +144,6 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 
 ## 規約
 
-- コメント・UI 文言はすべて日本語
 - タスクの状態遷移に制約は設けない(手戻り・中止を許容)
 - PATCH は「null のフィールドは変更しない」部分更新。空文字は「消す」。
   **数値の id はこれだと「消す」を表せないので、`PATCH /api/tasks/{id}` の `projectId` だけは
@@ -315,12 +314,6 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
 - 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7001、dev は認証なし
 - セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
 - 管理系エンドポイント(Actuator 等)は追加しない
-- **コードを変更したら、その内容に合わせて `CLAUDE.md`・`README.md`・`docs/詳細設計.md` も同じコミットで更新する**。
-  特にポート番号・環境変数・コマンド・ディレクトリ構成・CI/CD ワークフロー・API 仕様など、
-  ドキュメントに書かれている事実が変わったときは必ず追従させる(記述と実装を食い違わせない)。
-  該当する記述が無ければ更新は不要。迷ったら各ファイルを grep して古い記述が残っていないか確認する
-- **README は人に読ませる入口として簡潔に保つ**。設計の詳細・API 仕様は `docs/詳細設計.md` に置き、
-  README からはリンクで参照する。CLAUDE.md へのリンクは README に張らない(人に読ませるものではないため)
 
 ## ルール機能
 
