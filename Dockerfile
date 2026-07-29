@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- 1. フロントエンド ----------
-FROM node:22-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /build
 
 COPY frontend/package.json frontend/package-lock.json ./
