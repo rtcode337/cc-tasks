@@ -7,7 +7,7 @@ import UserMenu from '@/components/UserMenu.vue'
 <template>
   <header class="header">
     <div class="header__inner">
-      <RouterLink to="/" class="header__brand">cc-tasks</RouterLink>
+      <RouterLink to="/" class="header__brand">CC Tasks</RouterLink>
       <nav class="header__nav">
         <RouterLink to="/" class="header__link" active-class="header__link--active" exact-active-class="header__link--active">トップ</RouterLink>
         <RouterLink to="/rules" class="header__link" active-class="header__link--active">ルール</RouterLink>

@@ -1,4 +1,4 @@
-# cc-tasks
+# CC Tasks — Claude Code タスクメモ
 
 Claude Code に依頼したいタスクをメモ・管理する自分専用 Web アプリ。やりたいことは 2 つだけ:
 
