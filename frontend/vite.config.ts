@@ -21,8 +21,8 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'cc-tasks — Claude Code タスクメモ',
-        short_name: 'cc-tasks',
+        name: 'CC Tasks — Claude Code タスクメモ',
+        short_name: 'CC Tasks',
         description: 'Claude Code に依頼したいタスクの待ち行列',
         theme_color: '#1f2933',
         background_color: '#12181f',

@@ -10,7 +10,7 @@ const session = useSessionStore()
     <div class="login__toolbar">
       <ThemeToggle />
     </div>
-    <h1 class="login__title">cc-tasks</h1>
+    <h1 class="login__title">CC Tasks</h1>
     <p class="login__lead">Claude Code に依頼したいタスクの待ち行列</p>
     <button type="button" class="login__button" @click="session.login()">Google でログイン</button>
   </div>
