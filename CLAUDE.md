@@ -62,6 +62,16 @@ docker compose -f compose.build.yaml up --build
 amd64 / arm64 の両方をネイティブランナーで並列ビルドして 1 マニフェストにまとめる
 (arm64 の無料 `ubuntu-24.04-arm` ランナーは public リポジトリ限定)。
 
+### CI と依存更新
+
+PR と `main` への push で [.github/workflows/ci.yml](.github/workflows/ci.yml) が
+`./gradlew test` と `npm run build`(vue-tsc の型チェック込み)を回す。
+docker-publish はビルドするだけでテストを実行しないため、マージ前の検証はこちらが担う。
+依存更新は Dependabot([.github/dependabot.yml](.github/dependabot.yml))が週 1 回
+npm / Gradle / Docker ベースイメージ / GitHub Actions の更新 PR を作る
+(パッチ・マイナーはエコシステムごとに 1 本へグループ化、メジャーだけ個別 PR)。
+更新 PR は ci が通ったのを確認してからマージする。
+
 ## 動作確認の記録 (v0.1 時点)
 
 | 項目 | 結果 |

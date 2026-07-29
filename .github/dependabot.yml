@@ -1,0 +1,35 @@
+# 依存更新の PR を Dependabot に作らせる設定。
+# 週 1 回にまとめ、パッチ・マイナーは 1 本の PR にグループ化して数を抑える
+# (メジャーバージョンアップだけ個別の PR になるので、内容を見て判断する)。
+# 更新 PR は ci ワークフロー(テスト + 型チェック)が通ることを確認してからマージする。
+version: 2
+updates:
+  # フロントエンドの npm 依存
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # バックエンドの Gradle 依存
+  - package-ecosystem: gradle
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      gradle-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # Dockerfile のベースイメージ(node / temurin)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  # ワークフローで使う actions のバージョン
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
