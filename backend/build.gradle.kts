@@ -27,7 +27,7 @@ dependencies {
     // 認証失敗のレート制限
     implementation("com.bucket4j:bucket4j-core:8.10.1")
 
-    runtimeOnly("org.xerial:sqlite-jdbc:3.49.1.0")
+    runtimeOnly("org.xerial:sqlite-jdbc:3.53.2.1")
 
     // 開発時のみ: クラスパス変更で自動再起動 + LiveReload。
     // bootJar には含まれず、本番(jar 実行)では自動で無効化される。
