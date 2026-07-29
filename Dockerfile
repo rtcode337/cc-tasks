@@ -8,6 +8,10 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
 COPY frontend/ ./
+# ビルド番号(フッター表示)用のコミットハッシュ。ビルドコンテキストに .git を
+# 含めないため git からは引けず、CI(docker-publish)が build-arg で渡す。未指定なら nogit
+ARG GIT_SHA
+ENV GIT_SHA=$GIT_SHA
 RUN npm run build
 
 
