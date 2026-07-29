@@ -18,14 +18,15 @@ const projects = useProjectStore()
 usePullToRefresh(() => Promise.all([projects.load(true), tasks.load(true)]))
 
 // アーカイブ済みはここには出さない。/archived で見る。
+// 出すのは未完了(done 以外)= 未着手 + 着手中。
 // プロジェクト未設定のタスクは「未分類」として末尾にまとまる(0 件でも出す)
 const projectGroups = computed(() =>
   withUnlinkedGroup(
     buildTaskGroups(
-      tasks.todo,
+      tasks.active,
       projects.all.filter((p) => !p.archived),
     ),
-    tasks.todo,
+    tasks.active,
     true,
   ),
 )
@@ -109,7 +110,7 @@ async function save() {
     <!-- 未完了のタスク -->
     <section class="list">
       <h2 class="list__title">
-        未完了 <span class="list__count">{{ tasks.todo.length }}</span>
+        未完了 <span class="list__count">{{ tasks.active.length }}</span>
         <button type="button" class="list__add" @click="openCreateProject">＋ プロジェクト</button>
       </h2>
 

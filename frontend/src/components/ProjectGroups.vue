@@ -30,7 +30,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   edit: [project: Project]
   editTask: [task: Task]
-  /** 未完了に戻した。完了済み一覧が自分の手元から取り除くために使う */
+  /** 未着手に戻した。完了済み一覧が自分の手元から取り除くために使う */
   reopened: [taskId: number]
   error: [message: string]
 }>()
@@ -115,7 +115,16 @@ async function complete(id: number) {
   }
 }
 
-/** 完了済み一覧から未完了に戻す。 */
+/** 着手トグル。着手(todo → in_progress)と未着手に戻す(in_progress → todo)。 */
+async function setStatus(id: number, status: 'todo' | 'in_progress') {
+  try {
+    await tasks.update(id, { status })
+  } catch (e) {
+    fail(e)
+  }
+}
+
+/** 完了済み一覧から未着手に戻す。 */
 async function reopen(id: number) {
   try {
     await tasks.update(id, { status: 'todo' })
@@ -194,6 +203,8 @@ function startTask(group: TaskGroup, index: number, event: PointerEvent) {
               @edit="emit('editTask', task)"
               @complete="complete(task.id)"
               @reopen="reopen(task.id)"
+              @start="setStatus(task.id, 'in_progress')"
+              @unstart="setStatus(task.id, 'todo')"
             />
           </li>
         </ul>

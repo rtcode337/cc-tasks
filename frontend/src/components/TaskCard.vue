@@ -6,7 +6,8 @@ import type { Task } from '@/api/types'
 /** トップの未完了一覧のカード。未紐づけ・プロジェクトどちらのリストからも使う。 */
 defineProps<{ task: Task; repoUrls?: string[] }>()
 
-const emit = defineEmits<{ edit: []; complete: []; reopen: [] }>()
+/** start = 着手(todo → in_progress)、unstart = 未着手に戻す(in_progress → todo) */
+const emit = defineEmits<{ edit: []; complete: []; reopen: []; start: []; unstart: [] }>()
 </script>
 
 <template>
@@ -25,9 +26,23 @@ const emit = defineEmits<{ edit: []; complete: []; reopen: [] }>()
       <span class="card__buttons" data-no-drag>
         <!-- 完了済みの一覧では同じ位置が「戻す」になる -->
         <button v-if="task.status === 'done'" type="button" class="btn" @click="emit('reopen')">
-          未完了に戻す
+          未着手に戻す
         </button>
-        <button v-else type="button" class="btn btn--done" @click="emit('complete')">完了</button>
+        <template v-else>
+          <!-- 着手トグル。「依頼はしたが動作確認が済んでいない」を着手中で表す。
+               着手中は色付きで、もう一度押すと未着手に戻る -->
+          <button
+            v-if="task.status === 'in_progress'"
+            type="button"
+            class="btn btn--started"
+            title="未着手に戻す"
+            @click="emit('unstart')"
+          >
+            着手中
+          </button>
+          <button v-else type="button" class="btn btn--start" @click="emit('start')">着手</button>
+          <button type="button" class="btn btn--done" @click="emit('complete')">完了</button>
+        </template>
       </span>
     </div>
   </div>
@@ -109,5 +124,17 @@ const emit = defineEmits<{ edit: []; complete: []; reopen: [] }>()
 .btn--done:hover {
   color: var(--badge-done-text);
   border-color: var(--badge-done-text);
+}
+
+.btn--start:hover {
+  color: var(--badge-inprogress-text);
+  border-color: var(--badge-inprogress-text);
+}
+
+/* 着手中は状態表示を兼ねるので色を付けたままにする */
+.btn--started {
+  background: var(--badge-inprogress-bg);
+  color: var(--badge-inprogress-text);
+  border-color: var(--badge-inprogress-text);
 }
 </style>

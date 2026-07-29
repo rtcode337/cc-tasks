@@ -21,6 +21,8 @@
 
   --badge-todo-bg: #e4e9f0;
   --badge-todo-text: #48566a;
+  --badge-inprogress-bg: #fdf0cf;
+  --badge-inprogress-text: #8a5a00;
   --badge-done-bg: #d8f5e2;
   --badge-done-text: #1a7a3f;
 
@@ -45,6 +47,8 @@
 
   --badge-todo-bg: #2b3440;
   --badge-todo-text: #cbd5e1;
+  --badge-inprogress-bg: #3b2f12;
+  --badge-inprogress-text: #fbbf24;
   --badge-done-bg: #12321f;
   --badge-done-text: #4ade80;
 

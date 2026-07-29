@@ -1,5 +1,5 @@
-/** 未完了(todo)と完了(done)の 2 つだけ。wire 値の 'todo' は「未完了」の意味 */
-export type TaskStatus = 'todo' | 'done'
+/** 未着手(todo)・着手中(in_progress)・完了(done)。遷移に制約は無い */
+export type TaskStatus = 'todo' | 'in_progress' | 'done'
 
 export interface Project {
   id: number

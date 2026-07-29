@@ -34,7 +34,7 @@ const form = reactive({
  * 戻すのはいつでもよい。
  */
 const todoCount = computed(() =>
-  props.project ? tasks.todo.filter((t) => t.projectId === props.project?.id).length : 0,
+  props.project ? tasks.active.filter((t) => t.projectId === props.project?.id).length : 0,
 )
 const canArchive = computed(() => props.project?.archived || todoCount.value === 0)
 

@@ -18,9 +18,10 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- 持つのは「何をやりたいか」だけ。背景・受け入れ条件・スコープ外の列は廃止した
     -- (既存 DB からは SchemaMigrations が DROP COLUMN で落とす)
     title               TEXT    NOT NULL,
-    -- 未完了(todo)と完了(done)の 2 つだけ
+    -- 未着手(todo)・着手中(in_progress)・完了(done)。着手中を許さない CHECK の
+    -- 時期に作られた DB は SchemaMigrations がテーブルを作り直して揃える
     status              TEXT    NOT NULL DEFAULT 'todo'
-                        CHECK (status IN ('todo', 'done')),
+                        CHECK (status IN ('todo', 'in_progress', 'done')),
     -- プロジェクト内の手動並び替えの表示順 (昇順)。0 = 未並び替え(新規タスク)で
     -- グループの先頭に積まれる。既存 DB へは SchemaMigrations が ALTER で追加
     sort_order          INTEGER NOT NULL DEFAULT 0,
