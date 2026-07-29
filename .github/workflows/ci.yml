@@ -27,7 +27,7 @@ jobs:
           java-version: '21'
 
       # Gradle 本体と依存のキャッシュ
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - run: ./gradlew test
 
