@@ -269,7 +269,7 @@ https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でロ
   「受け入れ条件などを詳しく書く →」リンクも撤去した(編集モーダルに残るのは
   タスク内容・プロジェクトのみ)。
   一度も中身が書かれないまま廃止したので、既存 DB の 3 列も `SchemaMigrations` が
-  `DROP COLUMN` で落とす(SQLite 3.35+ が必要。同梱の sqlite-jdbc は 3.49)
+  `DROP COLUMN` で落とす(SQLite 3.35+ が必要。同梱の sqlite-jdbc は 3.53)
 - ✳ アイコン(コピーの隣)は Claude Code へのハンドオフ。タスク内容をプリフィルした
   `https://claude.ai/code?prompt=…&repositories=…` を新規タブで開く**直リンク**。
   スマホは初期状態ではユニバーサルリンクで Claude アプリが開き、アプリはクエリを
