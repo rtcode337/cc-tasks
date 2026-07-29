@@ -30,15 +30,21 @@ export function repoSlug(value: string): string | null {
  * そこに連結ルールを置いておけば全セッションに共通ルールが効く。
  */
 export function claudeCodeUrl(task: Task, repoUrls?: string[], rulesRepo?: string | null): string {
-  const lines = [`cc-tasks のタスク #${task.id} に取り組んでください。`, '', task.title]
+  // タスク番号は付けない —— MCP 廃止後は Claude Code 側から cc-tasks を参照できず、
+  // 番号を渡しても意味が無いため。かわりに規約リポジトリが設定されていれば
+  // 「まず共通ルールに従う」の一言を先頭に添える(セッションに含めるだけでは
+  // 他リポジトリの説明と誤読されうるので、従う対象だと明示する)
+  const rules = rulesRepo ? repoSlug(rulesRepo) : null
+  const lines = rules
+    ? [`まず、セッションに含まれる規約リポジトリ ${rules} の CLAUDE.md(共通ルール)に従ってください。`, '', task.title]
+    : [task.title]
   let prompt = lines.join('\n')
   if (prompt.length > PROMPT_LIMIT) {
-    prompt = `${prompt.slice(0, PROMPT_LIMIT)}\n…(以下略。全文は cc-tasks のタスク #${task.id} を参照)`
+    prompt = `${prompt.slice(0, PROMPT_LIMIT)}\n…(以下略。全文は cc-tasks のタスクを参照)`
   }
 
   const params = new URLSearchParams({ prompt })
   const slugs = (repoUrls ?? []).map(githubSlug).filter((s): s is string => s !== null)
-  const rules = rulesRepo ? repoSlug(rulesRepo) : null
   if (rules !== null && !slugs.includes(rules)) slugs.push(rules)
   if (slugs.length > 0) params.set('repositories', slugs.join(','))
   return `https://claude.ai/code?${params.toString()}`
