@@ -56,8 +56,8 @@ public interface TaskRepository extends ListCrudRepository<Task, Long> {
     @Query("SELECT count(*) FROM tasks WHERE project_id = :projectId")
     long countByProjectId(Long projectId);
 
-    /** 未完了の件数。プロジェクトをアーカイブしてよいかの判定に使う。 */
-    @Query("SELECT count(*) FROM tasks WHERE project_id = :projectId AND status = 'todo'")
+    /** 未完了(done 以外)の件数。プロジェクトをアーカイブしてよいかの判定に使う。 */
+    @Query("SELECT count(*) FROM tasks WHERE project_id = :projectId AND status <> 'done'")
     long countIncompleteByProjectId(Long projectId);
 
     /** プロジェクトを消すときに、紐づくタスクも一緒に落とす。 */

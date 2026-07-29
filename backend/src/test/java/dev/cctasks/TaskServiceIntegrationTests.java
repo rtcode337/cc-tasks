@@ -85,11 +85,16 @@ class TaskServiceIntegrationTests {
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
                 .isEqualTo("todo");
 
+        // 着手中 (依頼済みだが動作確認が済んでいない) にできる
+        taskService.updateStatus(task.id(), TaskStatus.IN_PROGRESS);
+        assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
+                .isEqualTo("in_progress");
+
         taskService.updateStatus(task.id(), TaskStatus.DONE);
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
                 .isEqualTo("done");
 
-        // 完了から未完了へ戻せる(遷移に制約は設けない)
+        // 完了から未着手へ戻せる(遷移に制約は設けない)
         taskService.updateStatus(task.id(), TaskStatus.TODO);
         assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, task.id()))
                 .isEqualTo("todo");
@@ -116,10 +121,11 @@ class TaskServiceIntegrationTests {
             Task t = taskService.create(project.id(), "完了 " + i, null);
             taskService.updateStatus(t.id(), TaskStatus.DONE);
         }
-        taskService.create(project.id(), "未完了 A", null);
-        taskService.create(project.id(), "未完了 B", null);
+        taskService.create(project.id(), "未着手 A", null);
+        Task started = taskService.create(project.id(), "着手中 B", null);
+        taskService.updateStatus(started.id(), TaskStatus.IN_PROGRESS);
 
-        // 未完了(active)には done が出ない
+        // 未完了(active)は done 以外の全部。着手中も含まれる
         assertThat(taskService.listActive(null)).hasSize(2)
                 .allSatisfy(t -> assertThat(t.status()).isNotEqualTo(TaskStatus.DONE));
 
@@ -182,6 +188,12 @@ class TaskServiceIntegrationTests {
         Project project = projectService.create("sample-project", null, null);
         Task task = taskService.create(project.id(), "残っている", null);
 
+        assertThatThrownBy(() -> projectService.update(project.id(), null, null, null, true))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
+
+        // 着手中もまだ片付いていないので弾く
+        taskService.updateStatus(task.id(), TaskStatus.IN_PROGRESS);
         assertThatThrownBy(() -> projectService.update(project.id(), null, null, null, true))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));

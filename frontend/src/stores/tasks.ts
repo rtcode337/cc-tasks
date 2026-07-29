@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { api } from '@/api/client'
 import type { Task, TaskDetail, TaskInput } from '@/api/types'
 
@@ -25,8 +25,6 @@ export const useTaskStore = defineStore('tasks', () => {
   const active = ref<Task[]>([])
   const loading = ref(false)
   const loaded = ref(false)
-
-  const todo = computed(() => active.value.filter((t) => t.status === 'todo'))
 
   function sort(list: Task[]): Task[] {
     return [...list].sort((a, b) => {
@@ -103,7 +101,6 @@ export const useTaskStore = defineStore('tasks', () => {
 
   return {
     active,
-    todo,
     loading,
     loaded,
     load,

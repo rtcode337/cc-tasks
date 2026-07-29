@@ -27,7 +27,7 @@ const modalOpen = ref(false)
 // アーカイブ済みは並べ替える意味が無いので sortable は付けない
 const groups = computed(() =>
   buildTaskGroups(
-    tasks.todo,
+    tasks.active,
     projects.all.filter((p) => p.archived),
   ),
 )

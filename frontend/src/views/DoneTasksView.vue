@@ -53,7 +53,7 @@ async function load() {
 
 onMounted(load)
 
-/** 未完了に戻したものはこの一覧から消す(トップ側はストアが面倒を見る)。 */
+/** 未着手に戻したものはこの一覧から消す(トップ側はストアが面倒を見る)。 */
 function drop(taskId: number) {
   done.value = done.value.filter((t) => t.id !== taskId)
 }

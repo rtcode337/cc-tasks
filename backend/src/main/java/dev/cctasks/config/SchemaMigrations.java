@@ -63,6 +63,35 @@ public class SchemaMigrations {
             jdbc.execute("DROP TABLE notes");
             log.info("廃止した notes テーブルを削除しました");
         }
+
+        // tasks.status の CHECK (2026-07): 一度廃止した着手中 (in_progress) を復活した。
+        // 廃止中に作られた DB は CHECK が in_progress を許さず書き込みで落ちるため、
+        // テーブルを作り直して差し替える (SQLite は CHECK だけの変更ができない)。
+        // 廃止前に作られた DB は CHECK が in_progress を許したままなので対象外。
+        String tasksDdl = jdbc.queryForObject(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'tasks'", String.class);
+        if (tasksDdl != null && !tasksDdl.contains("in_progress")) {
+            jdbc.execute("ALTER TABLE tasks RENAME TO tasks_old");
+            // DDL は schema.sql の tasks と同じに保つこと
+            jdbc.execute("""
+                    CREATE TABLE tasks (
+                        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                        project_id          INTEGER REFERENCES projects(id),
+                        title               TEXT    NOT NULL,
+                        status              TEXT    NOT NULL DEFAULT 'todo'
+                                            CHECK (status IN ('todo', 'in_progress', 'done')),
+                        sort_order          INTEGER NOT NULL DEFAULT 0,
+                        created_at          TEXT    NOT NULL,
+                        updated_at          TEXT    NOT NULL
+                    )""");
+            jdbc.execute("""
+                    INSERT INTO tasks (id, project_id, title, status, sort_order, created_at, updated_at)
+                    SELECT id, project_id, title, status, sort_order, created_at, updated_at FROM tasks_old""");
+            jdbc.execute("DROP TABLE tasks_old");
+            // 索引は旧テーブルに付いたまま消えるので張り直す
+            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project_id, status)");
+            log.info("tasks テーブルを作り直し、status の CHECK に in_progress を戻しました");
+        }
     }
 
     private boolean tableExists(String table) {

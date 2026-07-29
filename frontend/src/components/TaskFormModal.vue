@@ -30,7 +30,7 @@ async function save() {
   saving.value = true
   error.value = null
   try {
-    // status は送らない(「変更しない」扱い)。完了/未完了はカードのボタンで切り替える
+    // status は送らない(「変更しない」扱い)。状態はカードのボタンで切り替える
     await tasks.update(props.task.id, {
       // 「プロジェクトなし」は 0 で送る。undefined(= 未指定)だと「変更しない」になり紐づけが外れない
       projectId: form.projectId ?? UNLINK_PROJECT_ID,
