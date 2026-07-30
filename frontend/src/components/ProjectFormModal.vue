@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import { useTaskStore } from '@/stores/tasks'
+import { backdropClose } from '@/lib/backdropClose'
 import type { Project } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: []; saved: [project: Project] }>()
+
+const backdrop = backdropClose(() => emit('close'))
 
 const projects = useProjectStore()
 const tasks = useTaskStore()
@@ -135,7 +138,8 @@ async function toggleArchive() {
 </script>
 
 <template>
-  <div class="modal" @click.self="emit('close')">
+  <!-- 背景クリックで閉じる。中身のテキストを選択して背景で指を離したときは閉じない -->
+  <div class="modal" v-on="backdrop">
     <form class="modal__panel" @submit.prevent="save">
       <div class="modal__head">
         <h2 class="modal__title">{{ project ? 'プロジェクトを編集' : '新しいプロジェクト' }}</h2>

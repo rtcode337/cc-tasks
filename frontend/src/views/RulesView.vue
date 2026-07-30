@@ -4,6 +4,7 @@ import { useRuleStore } from '@/stores/rules'
 import { usePullToRefresh } from '@/lib/pullToRefresh'
 import { useDragSort } from '@/lib/dragSort'
 import { repoSlug } from '@/lib/claudeCode'
+import { backdropClose } from '@/lib/backdropClose'
 import type { Rule } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import CopyButton from '@/components/CopyButton.vue'
@@ -29,6 +30,7 @@ const modalOpen = ref(false)
 
 // 連結結果のモーダル
 const combinedOpen = ref(false)
+const combinedBackdrop = backdropClose(() => (combinedOpen.value = false))
 const combined = ref('')
 const combining = ref(false)
 
@@ -203,7 +205,8 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
     <RuleFormModal v-if="modalOpen" :rule="editing" @close="modalOpen = false" />
 
     <!-- 連結結果。貼り付けるための素の Markdown をそのまま出す -->
-    <div v-if="combinedOpen" class="modal" @click.self="combinedOpen = false">
+    <!-- 背景クリックで閉じる。本文を選択して背景で指を離したときは閉じない -->
+    <div v-if="combinedOpen" class="modal" v-on="combinedBackdrop">
       <div class="modal__panel">
         <div class="modal__head">
           <h2 class="modal__title">まとめたルール</h2>

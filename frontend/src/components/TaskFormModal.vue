@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { UNLINK_PROJECT_ID } from '@/api/types'
+import { backdropClose } from '@/lib/backdropClose'
 import type { Task } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
@@ -14,6 +15,8 @@ import ErrorBanner from '@/components/ErrorBanner.vue'
 const props = defineProps<{ task: Task }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+const backdrop = backdropClose(() => emit('close'))
 
 const tasks = useTaskStore()
 const projects = useProjectStore()
@@ -57,7 +60,8 @@ async function remove() {
 </script>
 
 <template>
-  <div class="modal" @click.self="emit('close')">
+  <!-- 背景クリックで閉じる。中身のテキストを選択して背景で指を離したときは閉じない -->
+  <div class="modal" v-on="backdrop">
     <form class="modal__panel" @submit.prevent="save">
       <div class="modal__head">
         <h2 class="modal__title">タスクを編集</h2>

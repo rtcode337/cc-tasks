@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRuleStore } from '@/stores/rules'
+import { backdropClose } from '@/lib/backdropClose'
 import type { Rule } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 
@@ -15,6 +16,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+const backdrop = backdropClose(() => emit('close'))
 
 const rules = useRuleStore()
 const error = ref<string | null>(null)
@@ -58,7 +61,8 @@ async function remove() {
 </script>
 
 <template>
-  <div class="modal" @click.self="emit('close')">
+  <!-- 背景クリックで閉じる。中身のテキストを選択して背景で指を離したときは閉じない -->
+  <div class="modal" v-on="backdrop">
     <form class="modal__panel" @submit.prevent="save">
       <div class="modal__head">
         <h2 class="modal__title">{{ rule ? 'ルールを編集' : '新しいルール' }}</h2>
