@@ -21,7 +21,9 @@ function buildNumber(): string {
       sha = 'nogit'
     }
   }
-  // sv-SE ロケールは YYYY-MM-DD 固定なので、タイムゾーンだけ JST を指定して日付にする
+  // タイムゾーンは固定する —— ビルドしたマシンの設定で日付がずれると、
+  // 同じコミットから別の番号が出て「どのビルドか」の手掛かりにならないため。
+  // sv-SE ロケールは YYYY-MM-DD 固定なので、そのまま日付表記に使える
   const date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' })
     .format(new Date())
     .replaceAll('-', '')

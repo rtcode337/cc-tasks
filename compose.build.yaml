@@ -18,7 +18,7 @@ services:
       ALLOWED_EMAIL: ${ALLOWED_EMAIL:?ログインを許可するメールアドレスを .env に設定してください}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
       DB_PATH: /data/cctasks.db
-      TZ: Asia/Tokyo
+      TZ: ${TZ:-Asia/Tokyo}
     volumes:
       - cctasks-data:/data
     mem_limit: 512m

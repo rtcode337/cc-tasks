@@ -23,10 +23,12 @@ services:
       # リダイレクトを自動導出する。プロキシがそれらを送らない/固定したい場合のみ設定。
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
       DB_PATH: /data/cctasks.db
-      TZ: Asia/Tokyo
+      # 表示・ログのタイムゾーン。既定は日本時間、必要なら .env の TZ で変えられる
+      TZ: ${TZ:-Asia/Tokyo}
     volumes:
       - cctasks-data:/data
-    # 非力なサーバー前提。JVM 側は MaxRAMPercentage でこの上限に追従する
+    # メモリの少ない環境でも動かせるよう 512MB で頭打ちにする。
+    # JVM 側は MaxRAMPercentage (Dockerfile) でこの上限に追従する
     mem_limit: 512m
     logging:
       driver: json-file

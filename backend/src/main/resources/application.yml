@@ -57,7 +57,7 @@ server:
       # devtools の自動再起動でもログインが維持される。
       persistent: true
       store-dir: ${SESSION_DIR:./data/sessions}
-      # 自分専用なので長め。ここまで無操作が続いたら失効
+      # 利用者 1 人前提なので長め。ここまで無操作が続いたら失効
       timeout: 30d
       cookie:
         name: CCTASKSSESSION

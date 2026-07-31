@@ -1,15 +1,15 @@
 # CC Tasks — Claude Code タスクメモ
 
-Claude Code に依頼したいタスクをメモ・管理する自分専用 Web アプリ。やりたいことは 2 つだけ:
+Claude Code に依頼したいタスクをメモ・管理する、利用者 1 人向けの Web アプリ。やりたいことは 2 つだけ:
 
-- **Claude Code への依頼の思いつきをメモで残す** —— 出先でスマホ(PWA)から放り込み、帰宅後に消化する
+- **Claude Code への依頼の思いつきをメモで残す** —— 出先でスマホ(PWA)から放り込み、腰を据えて作業できるときに消化する
 - **Claude Code に守らせたいルールを 1 箇所で管理する** —— まとめて 1 本の Markdown として取り出せる
 
 設計の詳細(画面・操作、データモデル、API)は [docs/詳細設計.md](docs/詳細設計.md) にまとめてある。
 
 ## 使い方の流れ
 
-出先で思いついたら開いてメモを一言残す → 帰宅後にカードの ✳ ボタンで **Claude Code をそのまま開いて**
+出先で思いついたら開いてメモを一言残す → 作業できるときにカードの ✳ ボタンで **Claude Code をそのまま開いて**
 消化する(またはメモをコピーして貼る)→ 終わったらメモを **完了** にする、という素早い運用を想定。
 
 扱うものは 3 つだけ:
@@ -133,6 +133,7 @@ docker compose -f compose.build.yaml up -d --build
 | `ALLOWED_EMAIL` | ログインを許可する Google アカウント (1 件) |
 | `DB_PATH` | SQLite ファイルパス (既定 `/data/cctasks.db`) |
 | `PUBLIC_BASE_URL` | **任意**。OAuth リダイレクトは未設定ならリクエストから自動導出する。プロキシが `X-Forwarded-*` を送らない場合のみ設定 |
+| `TZ` | **任意**。表示・ログのタイムゾーン (既定 `Asia/Tokyo`) |
 
 Google Cloud Console 側の「承認済みのリダイレクト URI」には
 `<公開 URL>/login/oauth2/code/google` を登録する(`PUBLIC_BASE_URL` を設定すればその値が基点、
