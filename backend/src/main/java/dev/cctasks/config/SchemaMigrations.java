@@ -48,7 +48,7 @@ public class SchemaMigrations {
 
         // tasks.context / acceptance_criteria / out_of_scope (2026-07 廃止):
         // 一度も中身が書かれないまま廃止したので、列ごと落として構わない。
-        // DROP COLUMN は SQLite 3.35+ (同梱の sqlite-jdbc は 3.49) で使える。
+        // DROP COLUMN は SQLite 3.35+ (同梱の sqlite-jdbc は 3.53) で使える。
         // どの列も索引に使っていないので落とせる (idx_tasks_project_status は project_id/status)。
         for (String column : List.of("context", "acceptance_criteria", "out_of_scope")) {
             if (columnExists("tasks", column)) {

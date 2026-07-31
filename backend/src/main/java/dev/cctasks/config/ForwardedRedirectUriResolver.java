@@ -18,11 +18,11 @@ import org.springframework.web.util.UriComponentsBuilder;
  * <p>背景: Tomcat の {@code RemoteIpValve}(= {@code forward-headers-strategy: native})は
  * {@code X-Forwarded-Proto: https} を見つけると、{@code X-Forwarded-Port} が無い限り
  * サーバーポートを 443 に固定する。プロキシがポートを {@code Host} ヘッダ(例
- * {@code Host: example.me:7443})でしか伝えてこない場合、この 443 固定で {@code {baseUrl}}
+ * {@code Host: cctasks.example.com:8443})でしか伝えてこない場合、この 443 固定で {@code {baseUrl}}
  * からポートが落ち、生成される {@code redirect_uri} が Google 側の登録値と食い違ってログインが
  * 弾かれる(非標準ポート公開で顕在化)。
  *
- * <p>そこで origin を次の優先順で自前導出する(Next.js の travel-log と同じ挙動):
+ * <p>そこで origin を次の優先順で自前導出する:
  * <ol>
  *   <li>スキーム = {@code X-Forwarded-Proto}</li>
  *   <li>ホスト = {@code X-Forwarded-Host}(あれば。ポート込み)、無ければ {@code Host} ヘッダ

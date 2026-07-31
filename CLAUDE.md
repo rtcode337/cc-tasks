@@ -99,15 +99,16 @@ DDL は `backend/src/main/resources/schema.sql`。起動のたびに `CREATE TAB
 (起動時に冪等な ALTER を当てる)の両方を直す**(マイグレーションツールは入れていない)。
 
 再起動後の最初の書き込みが極端に遅くなる問題への対策が 2 つ入っている。
-JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。HDD スピンアップ待ちの回避)と、
+JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。遅いディスクの書き込み待ちの回避)と、
 `WriteWarmup`(起動時に INSERT + DELETE を 1 コミットして、書き込み経路の JIT とディスクの
-初回コストを前払い)。外すと HDD がスピンダウンする本番環境で初回保存が数秒〜十数秒待ちに戻る。
+初回コストを前払い)。外すと低速なディスク(アイドル時に停止するものを含む)の環境で
+初回保存が数秒〜十数秒待ちに戻る。
 
 読み取り側(初回アクセスが極端に重い)にも対をなす対策が `HttpWarmup` に入っている。
 起動直後に自分自身へ GET を投げて MVC・フィルタチェーンのクラスロードと JIT を前払いし
-(ローカル実測で初回 85ms → 5ms。本番ではこのクラスロードが眠った HDD からの jar 読みになり
-数秒〜十数秒に化ける)、さらに 5 分ごとに静的資材(jar 内)と SQLite を読んでページキャッシュに
-留める(キャッシュヒットはディスク I/O ゼロなので HDD は眠ったままでよい)。あわせて
+(ローカル実測で初回 85ms → 5ms。遅いディスクではこのクラスロードが眠ったディスクからの
+jar 読みになり数秒〜十数秒に化ける)、さらに 5 分ごとに静的資材(jar 内)と SQLite を読んで
+ページキャッシュに留める(キャッシュヒットはディスク I/O ゼロなので遅いディスクでも待たされない)。あわせて
 `SpaWebConfig` で Vite のハッシュ付き `/assets/**` に `Cache-Control: max-age=1y, immutable`
 を付け、再訪時の取り直しを無くしている。
 
@@ -124,13 +125,13 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 `X-Forwarded-Port` が無い限りポートを 443 に固定し、**非標準ポート公開だと
 `{baseUrl}` のポートが落ちて `redirect_uri` が Google 登録値と食い違う**。
 リバースプロキシによってはポートを `X-Forwarded-Host` ではなく **`Host` ヘッダ**
-(例 `Host: example.me:8443`)でしか伝えてこないため、これが顕在化する。
+(例 `Host: cctasks.example.com:8443`)でしか伝えてこないため、これが顕在化する。
 これを避けるため `ForwardedRedirectUriResolver` が origin を自前導出する:
 スキーム=`X-Forwarded-Proto`、ホスト=`X-Forwarded-Host`(あれば)→無ければ `Host` ヘッダ。
-`Host` はポートを保持しているのでポートが残る(Next.js の travel-log と同じ挙動)。
+`Host` はポートを保持しているのでポートが残る。
 `PUBLIC_BASE_URL` を明示設定したときはテンプレートが絶対 URL なので書き換えは無効。
 **Google Console の「承認済みリダイレクト URI」にはポート込みで登録が必要**
-(例 `https://example.me:8443/login/oauth2/code/google`)。
+(例 `https://cctasks.example.com:8443/login/oauth2/code/google`)。
 セッション Cookie の `Secure` は `application.yml` で **あえて指定していない** ——
 Tomcat がリクエストのスキームを見て自動で付けるので、http ローカルでは非 Secure、
 https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でログインできる。
