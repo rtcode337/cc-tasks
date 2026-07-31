@@ -16,9 +16,10 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-# java が PATH に無く JAVA_HOME も未設定なら、よくある場所から JDK 21 を探す
+# java が PATH に無く JAVA_HOME も未設定なら、よくある場所から JDK 25 を探す
+# (build.gradle.kts の toolchain が 25。ここを変えるときは両方揃える)
 if [ -z "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then
-  for d in /usr/lib/jvm/java-21-* /usr/lib/jvm/temurin-21-* /opt/java/openjdk; do
+  for d in /usr/lib/jvm/java-25-* /usr/lib/jvm/temurin-25-* /opt/java/openjdk; do
     [ -x "$d/bin/java" ] && export JAVA_HOME="$d" && break
   done
 fi
@@ -26,7 +27,7 @@ if [ -n "${JAVA_HOME:-}" ]; then
   export PATH="$JAVA_HOME/bin:$PATH"
 fi
 if ! command -v java >/dev/null 2>&1; then
-  echo "JDK 21 が見つかりません。JAVA_HOME を設定してから実行してください。" >&2
+  echo "JDK 25 が見つかりません。JAVA_HOME を設定してから実行してください。" >&2
   exit 1
 fi
 
