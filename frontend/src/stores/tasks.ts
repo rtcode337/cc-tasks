@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/api/client'
-import type { Task, TaskDetail, TaskInput } from '@/api/types'
+import type { Task, TaskDetail, TaskExport, TaskImportResult, TaskInput } from '@/api/types'
 
 /**
  * 同じプロジェクト内での並び。手動並び順(昇順)が先で、同値は作成日時降順。
@@ -99,6 +99,22 @@ export const useTaskStore = defineStore('tasks', () => {
     return api.getTask(id)
   }
 
+  /** 未完了タスクをプロジェクト名・リポジトリ付きで書き出す。 */
+  function exportAll(): Promise<TaskExport> {
+    return api.exportTasks()
+  }
+
+  /**
+   * 書き出したものを読み込む。dryRun なら書き込まず予定だけ返す。
+   * 本実行ではプロジェクトが増えることもあるので、呼び出し側で
+   * プロジェクト一覧も取り直す(ここではタスクだけ面倒を見る)。
+   */
+  async function importAll(data: TaskExport, dryRun = false): Promise<TaskImportResult> {
+    const result = await api.importTasks(data, dryRun)
+    if (!dryRun) await load(true)
+    return result
+  }
+
   return {
     active,
     loading,
@@ -111,5 +127,7 @@ export const useTaskStore = defineStore('tasks', () => {
     remove,
     dropByProject,
     detail,
+    exportAll,
+    importAll,
   }
 })

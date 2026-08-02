@@ -1,4 +1,5 @@
 import type {
+  ImportRulesResult,
   Me,
   Paged,
   Project,
@@ -8,6 +9,8 @@ import type {
   RuleSettings,
   Task,
   TaskDetail,
+  TaskExport,
+  TaskImportResult,
   TaskInput,
   TaskStatus,
 } from './types'
@@ -172,6 +175,16 @@ export const api = {
 
   deleteTask: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
 
+  /** 未完了タスクの書き出し(プロジェクト名・リポジトリ付き)。返り値をそのまま importTasks に渡せる。 */
+  exportTasks: () => request<TaskExport>('/api/tasks/export'),
+
+  /** 書き出したものの読み込み。dryRun なら書き込まず、作る/飛ばす予定だけ返す。 */
+  importTasks: (data: TaskExport, dryRun = false) =>
+    request<TaskImportResult>(`/api/tasks/import?dryRun=${dryRun}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   listRules: () => request<Rule[]>('/api/rules'),
 
   /** 有効なルールを表示順に連結した 1 本の Markdown。 */
@@ -188,6 +201,16 @@ export const api = {
   /** 並び替え。全ルールの id を望む順で送ると、並び替え後の全件を返す。 */
   reorderRules: (ids: number[]) =>
     request<Rule[]>('/api/rules/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+
+  /**
+   * 連結ルールの Markdown を貼り付けて一覧へ戻す(combinedRules の逆)。
+   * dryRun なら書き込まず、取り込む見出しだけ返す。
+   */
+  importRules: (input: { markdown: string; replace?: boolean; dryRun?: boolean }) =>
+    request<ImportRulesResult>('/api/rules/import', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 
   ruleSettings: () => request<RuleSettings>('/api/rules/settings'),
 

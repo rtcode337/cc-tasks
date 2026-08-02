@@ -6,6 +6,7 @@ import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskPage;
 import dev.cctasks.task.TaskService;
 import dev.cctasks.task.TaskStatus;
+import dev.cctasks.task.TaskTransferService;
 import dev.cctasks.web.Dtos.PagedResponse;
 import dev.cctasks.web.Dtos.CreateTaskRequest;
 import dev.cctasks.web.Dtos.ReorderTasksRequest;
@@ -32,9 +33,31 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskTransferService transferService;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, TaskTransferService transferService) {
         this.taskService = taskService;
+        this.transferService = transferService;
+    }
+
+    /**
+     * 未完了タスクの書き出し(プロジェクト名・リポジトリ付き)。
+     * 返した本文をそのまま {@code POST /import} に渡せる。
+     */
+    @GetMapping("/export")
+    public TaskTransferService.Export export() {
+        return transferService.export();
+    }
+
+    /**
+     * 書き出したものの読み込み。プロジェクトは名前で照合し、無ければ作る。
+     * dryRun=true なら書き込まず、作る/飛ばす予定だけ返す。
+     */
+    @PostMapping("/import")
+    public TaskTransferService.ImportResult importTasks(
+            @RequestBody TaskTransferService.Export data,
+            @RequestParam(name = "dryRun", required = false, defaultValue = "false") boolean dryRun) {
+        return transferService.importTasks(data, dryRun);
     }
 
     /**

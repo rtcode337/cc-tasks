@@ -9,6 +9,7 @@ import type { Rule } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import CopyButton from '@/components/CopyButton.vue'
 import RuleFormModal from '@/components/RuleFormModal.vue'
+import RuleImportModal from '@/components/RuleImportModal.vue'
 
 /**
  * すべての Claude Code 環境に効かせたい共通ルール。
@@ -27,6 +28,9 @@ const error = ref<string | null>(null)
 /** null = 新規作成 */
 const editing = ref<Rule | null>(null)
 const modalOpen = ref(false)
+
+// 貼り付け取り込み(「まとめて表示」の逆)
+const importOpen = ref(false)
 
 // 連結結果のモーダル
 const combinedOpen = ref(false)
@@ -123,6 +127,8 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
     <div class="head">
       <h1 class="title">ルール</h1>
       <div class="head__actions">
+        <!-- まとめた Markdown からの復元。貼り先に残っている 1 本がバックアップになる -->
+        <button type="button" class="head__combine" @click="importOpen = true">取り込み</button>
         <button
           type="button"
           class="head__combine"
@@ -203,6 +209,8 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
     </div>
 
     <RuleFormModal v-if="modalOpen" :rule="editing" @close="modalOpen = false" />
+
+    <RuleImportModal v-if="importOpen" @close="importOpen = false" />
 
     <!-- 連結結果。貼り付けるための素の Markdown をそのまま出す -->
     <!-- 背景クリックで閉じる。本文を選択して背景で指を離したときは閉じない -->

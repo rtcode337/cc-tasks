@@ -9,6 +9,7 @@ import ErrorBanner from '@/components/ErrorBanner.vue'
 import ProjectFormModal from '@/components/ProjectFormModal.vue'
 import ProjectGroups from '@/components/ProjectGroups.vue'
 import TaskFormModal from '@/components/TaskFormModal.vue'
+import TaskTransferModal from '@/components/TaskTransferModal.vue'
 import type { Project, Task } from '@/api/types'
 
 const tasks = useTaskStore()
@@ -54,6 +55,9 @@ function openEditProject(project: Project) {
 
 // タスクの編集はカードを押してモーダルで(専用画面は持たない)
 const editingTask = ref<Task | null>(null)
+
+// 未完了タスクの書き出し / 読み込み。null = 閉じている
+const transferMode = ref<'export' | 'import' | null>(null)
 
 function openEditTask(task: Task) {
   editingTask.value = task
@@ -130,6 +134,23 @@ async function save() {
         <RouterLink to="/done" class="foot__link">完了したタスク →</RouterLink>
         <RouterLink to="/archived" class="foot__link">アーカイブしたプロジェクト →</RouterLink>
       </div>
+
+      <!-- 未完了タスクの持ち出しと復元。書き出したものをそのまま読み込める -->
+      <div class="backup">
+        <span class="backup__label">バックアップ</span>
+        <div class="backup__actions">
+          <button type="button" class="backup__button" @click="transferMode = 'export'">
+            書き出し
+          </button>
+          <button type="button" class="backup__button" @click="transferMode = 'import'">
+            読み込み
+          </button>
+        </div>
+        <p class="backup__hint">
+          未完了タスクをプロジェクト名・リポジトリ付きで書き出す。書き出した内容をそのまま
+          読み込めるので、テキストで保存しておけば別の環境にも移せる。
+        </p>
+      </div>
     </section>
 
     <ProjectFormModal
@@ -139,6 +160,8 @@ async function save() {
     />
 
     <TaskFormModal v-if="editingTask" :task="editingTask" @close="editingTask = null" />
+
+    <TaskTransferModal v-if="transferMode" :mode="transferMode" @close="transferMode = null" />
   </section>
 </template>
 
@@ -218,6 +241,50 @@ async function save() {
 
 .foot__link:hover {
   color: var(--accent);
+}
+
+/* バックアップ。一覧の下に区切って置く(ルール画面の規約リポジトリと同じ置き方) */
+.backup {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.backup__label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.backup__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.backup__button {
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.backup__button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.backup__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: var(--muted-dim);
 }
 
 .muted {

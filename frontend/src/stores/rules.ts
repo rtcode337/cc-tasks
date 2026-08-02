@@ -84,6 +84,23 @@ export const useRuleStore = defineStore('rules', () => {
     return (await api.combinedRules()).markdown
   }
 
+  /**
+   * まとめたルールの Markdown を貼り付けて一覧へ戻す(combined の逆)。
+   * dryRun なら書き込まず、取り込む見出しだけ返す(取り込み前の確認用)。
+   */
+  async function importMarkdown(
+    markdown: string,
+    options: { replace?: boolean; dryRun?: boolean } = {},
+  ) {
+    const result = await api.importRules({ markdown, ...options })
+    // 入れ替えでは既存の id が消えるので、返ってきた全件でそのまま置き換える
+    if (!options.dryRun) {
+      all.value = sort(result.rules)
+      loaded.value = true
+    }
+    return result
+  }
+
   return {
     all,
     enabledCount,
@@ -95,6 +112,7 @@ export const useRuleStore = defineStore('rules', () => {
     remove,
     reorder,
     combined,
+    importMarkdown,
     rulesRepoUrl,
     loadSettings,
     updateRulesRepoUrl,

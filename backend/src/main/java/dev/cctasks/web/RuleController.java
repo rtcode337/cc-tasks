@@ -6,6 +6,8 @@ import dev.cctasks.rule.Rule;
 import dev.cctasks.rule.RuleService;
 import dev.cctasks.web.Dtos.CombinedRulesResponse;
 import dev.cctasks.web.Dtos.CreateRuleRequest;
+import dev.cctasks.web.Dtos.ImportRulesRequest;
+import dev.cctasks.web.Dtos.ImportRulesResponse;
 import dev.cctasks.web.Dtos.ReorderRulesRequest;
 import dev.cctasks.web.Dtos.RuleResponse;
 import dev.cctasks.web.Dtos.RuleSettingsResponse;
@@ -67,6 +69,18 @@ public class RuleController {
     public RuleResponse create(@Valid @RequestBody CreateRuleRequest request) {
         Rule created = ruleService.create(request.title(), request.body(), request.enabled());
         return RuleResponse.from(created);
+    }
+
+    /**
+     * 連結ルールの Markdown を貼り付けて一覧へ戻す(`GET /combined` の逆)。
+     * dryRun=true なら書き込まず、取り込む見出しだけ返す。
+     */
+    @PostMapping("/import")
+    public ImportRulesResponse importRules(@Valid @RequestBody ImportRulesRequest request) {
+        return ImportRulesResponse.from(ruleService.importMarkdown(
+                request.markdown(),
+                Boolean.TRUE.equals(request.replace()),
+                Boolean.TRUE.equals(request.dryRun())));
     }
 
     /** 並び替え。全ルールの id を望む順で送ると、並び替え後の全件を返す。 */

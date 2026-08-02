@@ -11,6 +11,7 @@ import dev.cctasks.rule.RuleService;
 import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskService;
 import dev.cctasks.task.TaskStatus;
+import dev.cctasks.task.TaskTransferService;
 import dev.cctasks.web.ApiException;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +48,9 @@ class TaskServiceIntegrationTests {
 
     @Autowired
     RuleService ruleService;
+
+    @Autowired
+    TaskTransferService transferService;
 
     @Autowired
     JdbcTemplate jdbc;
@@ -368,5 +372,119 @@ class TaskServiceIntegrationTests {
         assertThatThrownBy(() -> taskService.create(9999L, "タスク", null))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(404));
+    }
+
+    @Test
+    void 未完了タスクを書き出すとプロジェクト名とリポジトリが付き完了分は含まれない() {
+        Project project = projectService.create("sample-project",
+                List.of("https://github.com/example/sample-project"), "説明");
+        taskService.create(project.id(), "未着手のタスク", null);
+        taskService.create(project.id(), "着手中のタスク", TaskStatus.IN_PROGRESS);
+        taskService.create(project.id(), "完了したタスク", TaskStatus.DONE);
+        taskService.create(null, "未分類のタスク", null);
+
+        TaskTransferService.Export export = transferService.export();
+
+        assertThat(export.version()).isEqualTo(TaskTransferService.FORMAT_VERSION);
+        assertThat(export.projects()).hasSize(1);
+        assertThat(export.projects().getFirst().name()).isEqualTo("sample-project");
+        assertThat(export.projects().getFirst().repoUrls())
+                .containsExactly("https://github.com/example/sample-project");
+        assertThat(export.projects().getFirst().tasks())
+                .extracting(TaskTransferService.ExportedTask::title)
+                .containsExactlyInAnyOrder("未着手のタスク", "着手中のタスク");
+        assertThat(export.unassignedTasks())
+                .extracting(TaskTransferService.ExportedTask::title)
+                .containsExactly("未分類のタスク");
+    }
+
+    @Test
+    void 読み込みは無いプロジェクトを作り既にあるものは触らない() {
+        Project existing = projectService.create("既存プロジェクト", List.of("https://example.com/old"), "元の説明");
+
+        TaskTransferService.ImportResult result = transferService.importTasks(new TaskTransferService.Export(
+                1, null,
+                List.of(
+                        new TaskTransferService.ExportedProject("新しいプロジェクト",
+                                List.of("https://github.com/example/new"),
+                                List.of(new TaskTransferService.ExportedTask("新規タスク", TaskStatus.IN_PROGRESS))),
+                        new TaskTransferService.ExportedProject("既存プロジェクト",
+                                List.of("https://example.com/new-url"),
+                                List.of(new TaskTransferService.ExportedTask("既存への追加", null)))),
+                List.of(new TaskTransferService.ExportedTask("未分類への追加", null))), false);
+
+        assertThat(result.createdProjects()).containsExactly("新しいプロジェクト");
+        assertThat(result.createdTasks())
+                .containsExactly("新しいプロジェクト / 新規タスク", "既存プロジェクト / 既存への追加", "未分類への追加");
+
+        // 既存プロジェクトはリポジトリも説明も書き換わらない(復元のたびに手元の設定を潰さない)
+        Project reloaded = projectService.requireById(existing.id());
+        assertThat(reloaded.repoUrlList()).containsExactly("https://example.com/old");
+        assertThat(reloaded.description()).isEqualTo("元の説明");
+        // status は指定どおり復元される
+        assertThat(taskService.listActive(null))
+                .filteredOn(t -> t.title().equals("新規タスク"))
+                .extracting(Task::status).containsExactly(TaskStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void 同じものを二度読み込んでも増えない() {
+        Project project = projectService.create("sample-project", null, null);
+        taskService.create(project.id(), "すでにあるタスク", null);
+
+        TaskTransferService.Export export = transferService.export();
+        TaskTransferService.ImportResult first = transferService.importTasks(export, false);
+        TaskTransferService.ImportResult second = transferService.importTasks(export, false);
+
+        assertThat(first.createdTasks()).isEmpty();
+        assertThat(first.skippedTasks()).containsExactly("sample-project / すでにあるタスク");
+        assertThat(second.createdTasks()).isEmpty();
+        assertThat(taskService.listActive(project.id())).hasSize(1);
+    }
+
+    @Test
+    void ファイル内で重複したタスクは一度だけ作る() {
+        TaskTransferService.ImportResult result = transferService.importTasks(new TaskTransferService.Export(
+                1, null,
+                List.of(new TaskTransferService.ExportedProject("sample-project", null, List.of(
+                        new TaskTransferService.ExportedTask("同じタイトル", null),
+                        new TaskTransferService.ExportedTask("同じタイトル", null)))),
+                null), false);
+
+        assertThat(result.createdTasks()).containsExactly("sample-project / 同じタイトル");
+        assertThat(result.skippedTasks()).containsExactly("sample-project / 同じタイトル");
+    }
+
+    @Test
+    void dryRunは何も書き込まずに予定だけ返す() {
+        TaskTransferService.Export export = new TaskTransferService.Export(1, null,
+                List.of(new TaskTransferService.ExportedProject("作られないはず", null,
+                        List.of(new TaskTransferService.ExportedTask("作られないタスク", null)))),
+                null);
+
+        TaskTransferService.ImportResult result = transferService.importTasks(export, true);
+
+        assertThat(result.createdProjects()).containsExactly("作られないはず");
+        assertThat(result.createdTasks()).containsExactly("作られないはず / 作られないタスク");
+        assertThat(projectService.list(null)).extracting(Project::name).doesNotContain("作られないはず");
+        assertThat(taskService.listActive(null)).isEmpty();
+    }
+
+    @Test
+    void 読み込めない入力は400になる() {
+        // 中身が空
+        assertThatThrownBy(() -> transferService.importTasks(
+                new TaskTransferService.Export(1, null, List.of(), List.of()), false))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
+
+        // 将来の形式は読まない
+        assertThatThrownBy(() -> transferService.importTasks(new TaskTransferService.Export(
+                TaskTransferService.FORMAT_VERSION + 1, null,
+                List.of(new TaskTransferService.ExportedProject("p", null,
+                        List.of(new TaskTransferService.ExportedTask("t", null)))),
+                null), false))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).status().value()).isEqualTo(400));
     }
 }

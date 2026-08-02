@@ -6,6 +6,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import dev.cctasks.project.Project;
 import dev.cctasks.rule.Rule;
+import dev.cctasks.rule.RuleService;
 import dev.cctasks.task.Task;
 import dev.cctasks.task.TaskDetail;
 import dev.cctasks.task.TaskStatus;
@@ -156,6 +157,25 @@ public final class Dtos {
 
     /** 並び替え。全ルールの id を望む順で過不足なく指定する。 */
     public record ReorderRulesRequest(@NotEmpty List<Long> ids) {
+    }
+
+    /**
+     * 連結ルールの貼り付け取り込み。replace=true は既存を入れ替え(既定は末尾へ追加)、
+     * dryRun=true は書き込まずに取り込む見出しだけ返す。
+     */
+    public record ImportRulesRequest(
+            @NotBlank(message = "は必須です") String markdown,
+            Boolean replace,
+            Boolean dryRun) {
+    }
+
+    /** titles は取り込む(取り込んだ)見出し。rules は取り込み後の全件で、dryRun では空。 */
+    public record ImportRulesResponse(List<String> titles, List<RuleResponse> rules) {
+
+        public static ImportRulesResponse from(RuleService.ImportResult result) {
+            return new ImportRulesResponse(result.titles(),
+                    result.rules().stream().map(RuleResponse::from).toList());
+        }
     }
 
     /** ルール画面の設定。rulesRepoUrl(規約リポジトリ)は未設定なら null。 */

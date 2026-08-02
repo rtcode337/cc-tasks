@@ -45,8 +45,9 @@ USER app
 ENV DB_PATH=/data/cctasks.db \
     SESSION_DIR=/data/sessions \
     PORT=7000 \
-    # メモリの少ない環境でも動かす前提 (仕様書 §9)。ヒープはホストの搭載量ではなく
-    # コンテナのメモリ上限に対する割合で決める (compose の mem_limit に追従する)
+    # メモリの少ない環境でも動かす前提 (仕様書 §9)。ヒープは固定値ではなく割合で決め、
+    # コンテナにメモリ上限があればそれに追従する (無ければホストの搭載量が基準)。
+    # 上限を設けられない環境で絞りたいときは JAVA_OPTS ごと差し替える
     JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
 
 EXPOSE 7000

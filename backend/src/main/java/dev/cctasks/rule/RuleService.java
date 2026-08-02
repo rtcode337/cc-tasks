@@ -91,6 +91,40 @@ public class RuleService {
         return rules.isEmpty() ? "" : COMBINED_PREAMBLE + "\n" + COMBINED_REPO_RULE + "\n" + rules;
     }
 
+    /** 取り込み結果。{@code titles} は取り込む見出し、{@code rules} は取り込み後の全件。 */
+    public record ImportResult(List<String> titles, List<Rule> rules) {
+    }
+
+    /**
+     * 連結ルールの Markdown を貼り付けて、ルール一覧へ戻す({@link #combined()} の逆)。
+     * ルールを失っても、貼り付け先に残っている 1 本の Markdown から復旧できるようにするため。
+     *
+     * @param replace true なら既存を全消しして入れ替える。false なら末尾に足す
+     * @param dryRun  true なら書き込まず、取り込む見出しだけ返す(実行前の確認用)。
+     *                入れ替えは取り消せないので、何が入るかを先に見せる
+     */
+    @Transactional
+    public ImportResult importMarkdown(String markdown, boolean replace, boolean dryRun) {
+        List<RuleMarkdownParser.ParsedRule> parsed = RuleMarkdownParser.parse(markdown);
+        if (parsed.isEmpty()) {
+            throw ApiException.badRequest(
+                    "取り込めるルールが見つかりません。`## 見出し` で区切った Markdown を貼り付けてください");
+        }
+        List<String> titles = parsed.stream().map(RuleMarkdownParser.ParsedRule::title).toList();
+        if (dryRun) {
+            return new ImportResult(titles, List.of());
+        }
+        if (replace) {
+            repository.deleteAll();
+        }
+        Instant now = now();
+        int order = replace ? 0 : repository.maxSortOrder();
+        for (RuleMarkdownParser.ParsedRule rule : parsed) {
+            repository.save(new Rule(null, rule.title(), rule.body(), true, ++order, now, now));
+        }
+        return new ImportResult(titles, repository.findAllOrdered());
+    }
+
     @Transactional
     public Rule create(String title, String body, Boolean enabled) {
         Instant now = now();
