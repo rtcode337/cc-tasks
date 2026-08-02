@@ -112,7 +112,23 @@ docker compose pull && docker compose up -d
 
 - `compose.yaml` は `127.0.0.1:7000` にだけ公開する。HTTPS 終端と外部公開は手前のリバースプロキシの責務
 - タグは `latest` と `sha-xxxxxxx`。切り戻しは `CCTASKS_IMAGE=ghcr.io/rtcode337/cc-tasks:sha-xxxxxxx docker compose up -d`
-- データ(SQLite・セッション)は名前付きボリューム `cctasks-data` に残るので、pull・再作成しても消えない
+- データ(SQLite・セッション)は**リポジトリ直下の `data/`** に残るので、pull・再作成しても消えない。
+  **バックアップ・別マシンへの移行はこのフォルダごとコピーすればよい**(停止してからコピーすること)
+- `data/` に書き込むユーザーは既定で `1000:1000`。`id -u` が 1000 以外のホストでは
+  `.env` に `CCTASKS_UID` / `CCTASKS_GID` を設定する。所有者合わせは起動前に
+  `cctasks-init` が自動でやるので、`chown` を手で打つ必要はない
+
+### `.env` を置けない環境へ入れる
+
+管理画面に YAML を貼り付けて起動するタイプの環境では、`.env` もシェルの環境変数も無いため
+`${...}` が解決できない。この場合は値を YAML に直接書いた単体定義を使う:
+
+```bash
+cp compose.standalone.example.yaml compose.standalone.yaml   # コピー先は .gitignore 済み
+```
+
+先頭の 3 ブロック(設定・データの置き場・実行ユーザー)を実値に置き換えて貼り付ける。
+**シークレットを含むのでコピーした側はコミットしないこと。**
 
 ### ローカルでイメージをビルドして確認
 
@@ -134,11 +150,17 @@ docker compose -f compose.build.yaml up -d --build
 | `DB_PATH` | SQLite ファイルパス (既定 `/data/cctasks.db`) |
 | `PUBLIC_BASE_URL` | **任意**。OAuth リダイレクトは未設定ならリクエストから自動導出する。プロキシが `X-Forwarded-*` を送らない場合のみ設定 |
 | `TZ` | **任意**。表示・ログのタイムゾーン (既定 `Asia/Tokyo`) |
+| `CCTASKS_UID` / `CCTASKS_GID` | **任意**。`data/` に書き込むユーザー (既定 `1000:1000`) |
 
 Google Cloud Console 側の「承認済みのリダイレクト URI」には
 `<公開 URL>/login/oauth2/code/google` を登録する(`PUBLIC_BASE_URL` を設定すればその値が基点、
 未設定ならプロキシ経由の実 URL)。セッション Cookie の `Secure` はリクエストのスキームから
 自動判定される(https なら付与、http なら非付与)ので、http ローカル・https 本番のどちらでも動く。
+
+> **https で公開しているのに `redirect_uri` が http になってログインできない場合**は、
+> 手前のプロキシが `X-Forwarded-Proto` を送っていない(既定で付けない実装がある)。
+> コンテナは HTTP しか受けないため、このヘッダが無いとスキームを復元できない。
+> `.env` に `PUBLIC_BASE_URL=https://<公開ホスト>` を設定すれば、ヘッダ無しでも https で組む。
 
 ## ルールを Claude Code に効かせる
 

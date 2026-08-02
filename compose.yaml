@@ -6,7 +6,24 @@
 # TLS 終端と外部公開はこの手前のリバースプロキシの責務 (仕様書 §3, §6.3)。
 # ローカルでイメージをビルドして動かしたいときは compose.build.yaml を使う。
 services:
+  # 本体を起動する前に data/ の所有者を実行ユーザーに合わせる。
+  # bind マウント先がホストに無いと Docker が root 所有で作ってしまい、非 root の
+  # 本体が書けずに落ちる(「セッションの保存先ディレクトリを作成できません」)。
+  # バックアップから別の所有者で復元したときも、ここで揃うので手作業が要らない。
+  # 本体と同じイメージを使うので pull は増えず、chown だけして即終了する。
+  cctasks-init:
+    image: ${CCTASKS_IMAGE:-ghcr.io/rtcode337/cc-tasks:latest}
+    container_name: cc-tasks-init
+    user: root
+    volumes:
+      - ./data:/data
+    entrypoint: ["sh", "-c", "chown -R ${CCTASKS_UID:-1000}:${CCTASKS_GID:-1000} /data"]
+    restart: "no"
+
   cctasks:
+    depends_on:
+      cctasks-init:
+        condition: service_completed_successfully
     # 障害時は :latest ではなく :sha-xxxxxxx を指定すれば任意の時点に戻せる。
     # CCTASKS_IMAGE で上書き可(既定は GHCR の latest)。
     image: ${CCTASKS_IMAGE:-ghcr.io/rtcode337/cc-tasks:latest}
@@ -26,15 +43,17 @@ services:
       # 表示・ログのタイムゾーン。既定は日本時間、必要なら .env の TZ で変えられる
       TZ: ${TZ:-Asia/Tokyo}
     volumes:
-      - cctasks-data:/data
-    # メモリの少ない環境でも動かせるよう 512MB で頭打ちにする。
-    # JVM 側は MaxRAMPercentage (Dockerfile) でこの上限に追従する
-    mem_limit: 512m
+      # リポジトリ直下の data/ に置く。名前付きボリュームだと実体が
+      # /var/lib/docker/volumes/ 配下に隠れ、「リポジトリのフォルダごとコピー」で
+      # 移行・バックアップしたときに黙って取り残される。
+      # 所有者は cctasks-init が起動前に揃える
+      - ./data:/data
+    # data/ に書かれるファイルをホストのユーザー所有にする。イメージ内の app は
+    # uid 100 で、ホスト側の所有者と合わないと bind マウントに書けない。
+    # uid/gid が 1000 以外のホストでは .env の CCTASKS_UID/GID で合わせる
+    user: "${CCTASKS_UID:-1000}:${CCTASKS_GID:-1000}"
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  cctasks-data:

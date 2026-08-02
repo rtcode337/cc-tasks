@@ -1,0 +1,83 @@
+# .env を置けず、環境変数も設定できない実行環境向けの単体定義。
+# (管理画面に YAML を貼り付けて起動するタイプの環境を想定)
+#
+# compose.yaml との違いは「${...} を使わず、値を YAML に直接書く」点だけ。
+# ${...} は .env かシェルの環境変数からしか解決できず、どちらも無い環境では
+# 既定値のあるものしか効かないため。
+#
+# 使い方:
+#   1. このファイルを compose.standalone.yaml にコピーする (.gitignore 済み)
+#   2. 「ここだけ編集」の 3 ブロックを実値に置き換える
+#   3. その内容を管理画面に貼り付けて起動する
+#
+# コピーした側はシークレットを含む。絶対にコミットしないこと。
+# .env を置ける環境では compose.yaml を使う (値は .env に書く)。
+
+# ---- ここだけ編集 (1/3): アプリに渡す設定 ----
+x-settings: &settings
+  # Google OAuth クレデンシャル
+  GOOGLE_CLIENT_ID: "xxxxxxxx.apps.googleusercontent.com"
+  GOOGLE_CLIENT_SECRET: "xxxxxxxx"
+  # ログインを許可する Google アカウント (1 件のみ)
+  ALLOWED_EMAIL: "you@example.com"
+  # 公開 URL。手前のプロキシが X-Forwarded-Proto を送らない環境では **必須**。
+  # 未設定だと redirect_uri が http で組まれ、https 公開なのにログインできない
+  PUBLIC_BASE_URL: "https://cctasks.example.com"
+  # 表示・ログのタイムゾーン
+  TZ: "Asia/Tokyo"
+  # SQLite の位置 (コンテナ内)。通常は変更不要
+  DB_PATH: "/data/cctasks.db"
+  # 任意。JVM のヒープ上限。既定 (Dockerfile) は -XX:MaxRAMPercentage=70 で、
+  # コンテナのメモリ上限に追従する。mem_limit を指定できない環境では上限が
+  # ホストの搭載量基準になるため、抑えたいならここで直接決める。
+  # 既定の他のオプションごと置き換わるので、まとめて書くこと
+  #JAVA_OPTS: "-Xmx360m -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
+
+# ---- ここだけ編集 (2/3): データの置き場 ----
+# 管理画面から登録する環境では相対パス (./data) の基準が分かりにくいので、
+# ホスト側は絶対パスで書く。バックアップはこのディレクトリをコピーすればよい。
+x-data-volume: &data-volume "/path/to/cc-tasks/data:/data"
+
+# ---- ここだけ編集 (3/3): 実行ユーザー ----
+# ホスト側でこのディレクトリを読み書きするユーザーの `id -u`:`id -g`。
+# ここが合っていないとデータディレクトリに書けず起動に失敗する
+# (「セッションの保存先ディレクトリを作成できません: /data/sessions」)。
+x-run-as: &run-as "1000:1000"
+
+services:
+  # 本体を起動する前にデータディレクトリの所有者を実行ユーザーに合わせる。
+  # マウント先がホストに無いと root 所有で作られ、非 root の本体が書けずに落ちるため。
+  # $$0 は sh に渡す位置パラメータ (compose が $ をエスケープする書き方)。
+  # これで chown 先と下の user: が同じ値を参照でき、片方だけ直す事故を防げる
+  cctasks-init:
+    image: ghcr.io/rtcode337/cc-tasks:latest
+    container_name: cc-tasks-init
+    user: root
+    volumes:
+      - *data-volume
+    entrypoint: ["sh", "-c", 'chown -R "$$0" /data', *run-as]
+    restart: "no"
+
+  cctasks:
+    depends_on:
+      cctasks-init:
+        condition: service_completed_successfully
+    # 障害時は :latest ではなく :sha-xxxxxxx を指定すれば任意の時点に戻せる
+    image: ghcr.io/rtcode337/cc-tasks:latest
+    container_name: cc-tasks
+    restart: unless-stopped
+    ports:
+      # プロキシからのみ届けばよいのでループバックに閉じる。
+      # 同一ホストのプロキシから届かない構成なら "7000:7000" にする
+      - "127.0.0.1:7000:7000"
+    environment: *settings
+    volumes:
+      - *data-volume
+    user: *run-as
+    # mem_limit はあえて置いていない (指定を受け付けない環境があるため)。
+    # 代わりにメモリを抑えたいときは上の x-settings で JAVA_OPTS を有効にする
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

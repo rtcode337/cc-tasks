@@ -5,7 +5,22 @@
 # 本番は compose.yaml(GHCR から pull)を使う。設定は compose.yaml と揃えてあり、
 # 違いは image を pull せず手元でビルドする点だけ。
 services:
+  # data/ の所有者合わせ。狙いは compose.yaml のコメント参照。
+  # 本体と同じビルド・同じタグなので、ビルドは 1 回で済む(2 つ目はキャッシュに当たる)
+  cctasks-init:
+    build: .
+    image: ghcr.io/rtcode337/cc-tasks:local
+    container_name: cc-tasks-init
+    user: root
+    volumes:
+      - ./data:/data
+    entrypoint: ["sh", "-c", "chown -R ${CCTASKS_UID:-1000}:${CCTASKS_GID:-1000} /data"]
+    restart: "no"
+
   cctasks:
+    depends_on:
+      cctasks-init:
+        condition: service_completed_successfully
     build: .
     image: ghcr.io/rtcode337/cc-tasks:local
     container_name: cc-tasks
@@ -20,13 +35,11 @@ services:
       DB_PATH: /data/cctasks.db
       TZ: ${TZ:-Asia/Tokyo}
     volumes:
-      - cctasks-data:/data
+      - ./data:/data
+    user: "${CCTASKS_UID:-1000}:${CCTASKS_GID:-1000}"
     mem_limit: 512m
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  cctasks-data:

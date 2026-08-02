@@ -12,7 +12,15 @@ backend/data/
 *.db-wal
 *.db-shm
 
+# Docker のデータ置き場(SQLite とセッション)。
+# 中身は追跡しないが、ディレクトリ自体は残す(バックアップ先として分かりやすいように)
+data/*
+!data/.gitkeep
+
 # 秘密情報
 .env
+# .env を置けない環境へ貼り付ける用のコピー。実値を直接書くのでコミットしない
+# (雛形は compose.standalone.example.yaml)
+compose.standalone.yaml
 
 .DS_Store

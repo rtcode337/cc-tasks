@@ -62,6 +62,44 @@ docker compose -f compose.build.yaml up --build
 amd64 / arm64 の両方をネイティブランナーで並列ビルドして 1 マニフェストにまとめる
 (arm64 の無料 `ubuntu-24.04-arm` ランナーは public リポジトリ限定)。
 
+データ(SQLite とセッション)は**リポジトリ直下の `data/` を `/data` に bind マウント**する。
+名前付きボリュームだと実体が `/var/lib/docker/volumes/` に隠れ、リポジトリのフォルダごと
+コピーして移行したときに黙って取り残されるため(実際にデータを飛ばしたことがある)。
+バックアップは `data/` をコピーするだけでよい。
+
+イメージ内の実行ユーザーは非 root(uid 100)なので、bind マウント先の所有者が合わないと
+書けずに落ちる(`セッションの保存先ディレクトリを作成できません: /data/sessions`)。
+とくにホストに `data/` が無い状態で `up` すると **Docker がそれを root 所有で作る**ため、
+何もしないと必ず踏む。対策は2つ:
+
+- compose の `user:` で uid/gid を指定し、書かれるファイルをホストのユーザー所有にする
+  (既定 `1000:1000`。`id -u` が違うホストは `.env` の `CCTASKS_UID`/`CCTASKS_GID`)
+- 本体の前に `cctasks-init` サービス(同じイメージを root で起動)が `chown -R` する。
+  `depends_on: service_completed_successfully` で完了を待ってから本体が起動するので、
+  ディレクトリが無い環境でも、別の所有者でバックアップから戻したときも手作業が要らない
+
+### compose ファイルは 3 つある
+
+**どれか 1 つを直したら、他も同じコミットで揃える**(サービス構成・環境変数・ポートなど)。
+
+| ファイル | 用途 | 値の渡し方 |
+|---|---|---|
+| `compose.yaml` | 本番(GHCR から pull) | `${...}` ← `.env` |
+| `compose.build.yaml` | 手元でビルドして本番同等確認 | `${...}` ← `.env` |
+| `compose.standalone.example.yaml` | `.env` を置けない環境へ貼り付ける雛形 | YAML に直書き |
+
+単体定義が要るのは、**管理画面に YAML を貼り付けて起動する環境**が実在するため。そこには
+`.env` もシェルの環境変数も無く `${...}` を解決できないので、値を YAML に書くしかない。
+編集箇所は先頭の 3 ブロック(`x-settings` / `x-data-volume` / `x-run-as`)に集約し、
+アンカーで参照している ── `chown` 先と `user:` は同じ値でなければならず、
+2 箇所に書くと片方だけ直す事故が起きるため。`entrypoint` の `$$0` は compose の
+エスケープで、`sh -c '…' <値>` の位置パラメータとしてアンカーの値を渡している。
+
+実値を書いたコピー(`compose.standalone.yaml`)は **`.gitignore` 済み**。
+リポジトリに置くのは雛形(`.example`)だけで、シークレットは決してコミットしない。
+この単体定義には **`mem_limit` を置かない**(受け付けない環境があるため)。
+メモリを絞りたい場合は `JAVA_OPTS` で `-Xmx` を直接指定する。
+
 ### CI と依存更新
 
 PR と `main` への push で [.github/workflows/ci.yml](.github/workflows/ci.yml) が
@@ -136,6 +174,11 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 Tomcat がリクエストのスキームを見て自動で付けるので、http ローカルでは非 Secure、
 https 本番では Secure になり、`PUBLIC_BASE_URL` 無しでも両方でログインできる。
 ここを `secure: true` で固定すると http ローカルでセッションが載らずログインループになる。
+
+**`X-Forwarded-Proto` を送らないプロキシ配下では、この自動導出は成立しない**
+(既定で付けない実装がある)。コンテナは HTTP しか受けないので、ヘッダが無ければ
+http と判断するしかなく、`redirect_uri` が http で組まれてログインできない。
+この場合は `PUBLIC_BASE_URL` を設定する ── 想定されている唯一の回避手段。
 
 ### フィルタの差し込み位置
 
