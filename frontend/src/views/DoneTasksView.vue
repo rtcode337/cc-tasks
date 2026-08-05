@@ -67,7 +67,6 @@ function drop(taskId: number) {
       <h1 class="title">
         完了したタスク <span class="count">{{ done.length }}</span>
       </h1>
-      <RouterLink to="/" class="back">← トップ</RouterLink>
     </div>
 
     <p v-if="loading || projects.loading" class="muted">読み込み中…</p>
@@ -83,6 +82,10 @@ function drop(taskId: number) {
       @reopened="drop"
       @error="error = $event"
     />
+
+    <div class="foot">
+      <RouterLink to="/" class="foot__link">← トップ</RouterLink>
+    </div>
 
     <TaskFormModal v-if="editingTask" :task="editingTask" @close="editingTask = null" />
   </section>
@@ -108,15 +111,19 @@ function drop(taskId: number) {
   color: var(--muted-dim);
 }
 
-.back,
-.back:visited {
-  color: var(--muted);
-  font-size: 0.8125rem;
-  text-decoration: none;
-  white-space: nowrap;
+/* トップへ戻る導線は一覧の左下(トップから来るときのリンクと同じ位置・同じ見た目) */
+.foot {
+  margin-top: 1.5rem;
 }
 
-.back:hover {
+.foot__link,
+.foot__link:visited {
+  color: var(--muted-dim);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.foot__link:hover {
   color: var(--accent);
 }
 

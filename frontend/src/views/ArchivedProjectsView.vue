@@ -54,7 +54,6 @@ const editingTask = ref<Task | null>(null)
 
     <div class="head">
       <h1 class="title">アーカイブしたプロジェクト</h1>
-      <RouterLink to="/" class="back">← トップ</RouterLink>
     </div>
 
     <p v-if="tasks.loading || projects.loading" class="muted">読み込み中…</p>
@@ -70,6 +69,10 @@ const editingTask = ref<Task | null>(null)
         @error="error = $event"
       />
     </template>
+
+    <div class="foot">
+      <RouterLink to="/" class="foot__link">← トップ</RouterLink>
+    </div>
 
     <ProjectFormModal
       v-if="modalOpen"
@@ -95,15 +98,19 @@ const editingTask = ref<Task | null>(null)
   font-size: 1.125rem;
 }
 
-.back,
-.back:visited {
-  color: var(--muted);
-  font-size: 0.8125rem;
-  text-decoration: none;
-  white-space: nowrap;
+/* トップへ戻る導線は一覧の左下(トップから来るときのリンクと同じ位置・同じ見た目) */
+.foot {
+  margin-top: 1.5rem;
 }
 
-.back:hover {
+.foot__link,
+.foot__link:visited {
+  color: var(--muted-dim);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.foot__link:hover {
   color: var(--accent);
 }
 
