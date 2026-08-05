@@ -12,6 +12,15 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # TypeScript 7(ネイティブ移植版)は package の exports から `./lib/tsc` を外しており、
+      # それを require.resolve する vue-tsc が起動できない
+      # (`ERR_PACKAGE_PATH_NOT_EXPORTED`。vue-tsc 3.3.9 時点でも未対応。peer は
+      # `typescript: >=5.0.0` と広いので、npm install では気づけず CI で落ちる)。
+      # **上げられない PR が出続けても判断は変わらない**ので、メジャーだけ止めておく。
+      # vue-tsc が対応したらこの ignore を外す(5.x 系のマイナー・パッチは今までどおり来る)。
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # バックエンドの Gradle 依存
   - package-ecosystem: gradle

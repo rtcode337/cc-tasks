@@ -119,6 +119,13 @@ npm / Gradle / Docker ベースイメージ / GitHub Actions の更新 PR を作
 (パッチ・マイナーはエコシステムごとに 1 本へグループ化、メジャーだけ個別 PR)。
 更新 PR は ci が通ったのを確認してからマージする。
 
+**TypeScript のメジャー更新だけ `ignore` で止めてある。** TypeScript 7(ネイティブ移植版)は
+package の exports から `./lib/tsc` を外しており、それを `require.resolve` する vue-tsc が
+起動できない(`ERR_PACKAGE_PATH_NOT_EXPORTED`。vue-tsc 3.3.9 時点でも未対応で、peer は
+`typescript: >=5.0.0` と広いため npm install では気づけず CI で落ちる)。**上げられない PR が
+出続けても判断は変わらない**ので止めている。**vue-tsc が対応したら ignore を外す** ——
+外し忘れると TypeScript が 5.x に据え置かれたままになる。
+
 ## 動作確認の記録 (v0.1 時点)
 
 | 項目 | 結果 |
