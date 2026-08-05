@@ -8,6 +8,9 @@
 #   frontend : Vite dev server (HMR)。/api は backend にプロキシ。
 #
 # 開くのは frontend 側: http://localhost:7000
+# スマホなどからドメイン名で開くときは VITE_ALLOWED_HOSTS を付ける
+# (Vite は localhost と IP 直打ち以外を既定で 403 にするため):
+#   VITE_ALLOWED_HOSTS=dev.example.lan ./dev.sh
 # Ctrl-C で全部まとめて停止する。
 #
 # ※ Docker を毎回リビルドする必要はない。これで反復するのが速い。

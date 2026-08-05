@@ -102,6 +102,7 @@ cd backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
 cd backend && ./gradlew -t classes          # 別ターミナル
 
 # frontend (:7000)。/api を :7001 にプロキシ
+# ドメイン名で開くなら VITE_ALLOWED_HOSTS=<ホスト名> を付ける(既定は localhost と IP のみ許可)
 cd frontend && npm install && npm run dev
 ```
 

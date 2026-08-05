@@ -52,6 +52,15 @@ npm run build     # vue-tsc の型チェック込み
 
 バックエンドを `dev` プロファイルで起動しておくこと。
 
+**IP 直打ち以外のホスト名で開くときは `VITE_ALLOWED_HOSTS` が要る。** Vite は
+`localhost` と IP アドレスにしか応答せず(DNS リバインディング対策)、ローカル DNS で
+当てたドメインで開くと 403 になる(`Blocked request. This host … is not allowed.`)。
+通したい名前は環境変数で渡す —— **開発マシンごとに違う値なので設定に直書きしない**:
+
+```bash
+VITE_ALLOWED_HOSTS=dev.example.lan npm run dev   # カンマ区切りで複数可
+```
+
 ### 単一コンテナで動かす(ローカルビルド)
 
 ```bash

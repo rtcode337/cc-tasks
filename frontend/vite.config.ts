@@ -83,6 +83,15 @@ export default defineConfig({
     // 開発中にブラウザで開くのはこちらなので、打ちやすい 7000 はフロントが取る
     // (backend は dev プロファイルで 7001。本番の 7000 は application.yml 側)
     port: 7000,
+    // dev server が応答するホスト名。**Vite は localhost と IP 直打ちしか既定で許さない**
+    // (DNS リバインディング対策)ので、ローカル DNS で当てたドメインで開くと 403 になる
+    //     Blocked request. This host ("…") is not allowed.
+    // 通したいホスト名は環境変数で渡す。**開発マシンごとに違う値なのでリポジトリには持たない**:
+    //     VITE_ALLOWED_HOSTS=dev.example.lan npm run dev   (カンマ区切りで複数可)
+    allowedHosts:
+      process.env.VITE_ALLOWED_HOSTS?.split(',')
+        .map((host) => host.trim())
+        .filter(Boolean) ?? [],
     // 開発時のみ Vite dev server → Spring にプロキシする。
     // 本番はオリジン 1 個なのでプロキシも CORS も不要 (仕様書 §3)
     proxy: {
