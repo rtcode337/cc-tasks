@@ -80,13 +80,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: 7001,
+    // 開発中にブラウザで開くのはこちらなので、打ちやすい 7000 はフロントが取る
+    // (backend は dev プロファイルで 7001。本番の 7000 は application.yml 側)
+    port: 7000,
     // 開発時のみ Vite dev server → Spring にプロキシする。
     // 本番はオリジン 1 個なのでプロキシも CORS も不要 (仕様書 §3)
     proxy: {
-      '/api': { target: 'http://localhost:7000', changeOrigin: false },
-      '/oauth2': { target: 'http://localhost:7000', changeOrigin: false },
-      '/login': { target: 'http://localhost:7000', changeOrigin: false },
+      '/api': { target: 'http://localhost:7001', changeOrigin: false },
+      '/oauth2': { target: 'http://localhost:7001', changeOrigin: false },
+      '/login': { target: 'http://localhost:7001', changeOrigin: false },
     },
   },
   build: {

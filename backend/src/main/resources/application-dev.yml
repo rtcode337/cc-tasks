@@ -5,6 +5,10 @@ spring:
     url: jdbc:sqlite:${DB_PATH:./data/cctasks.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
 
 server:
+  # **開発中に人が開くのは Vite 側**(HMR が効くのはこちら)なので、打ちやすい 7000 は
+  # フロントに譲り、backend は 7001 で待つ。本番は application.yml の 7000 のまま
+  # (Dockerfile・compose もそちらを見る)。
+  port: ${PORT:7001}
   servlet:
     session:
       cookie:

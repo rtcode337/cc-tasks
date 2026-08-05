@@ -88,7 +88,7 @@ Claude Code に依頼したいタスクをメモ・管理する、利用者 1 �
 ```
 
 backend(dev プロファイル / **認証なし**)+ 継続コンパイル + フロント(Vite HMR)を
-まとめて起動する。ブラウザで開くのは **`http://localhost:7001`**。
+まとめて起動する。ブラウザで開くのは **`http://localhost:7000`**。
 
 - フロント: 保存で即 HMR
 - バックエンド: 保存 → 再コンパイル → devtools が数秒で自動再起動
@@ -97,11 +97,11 @@ backend(dev プロファイル / **認証なし**)+ 継続コンパイル + フ�
 個別に起動する場合:
 
 ```bash
-# backend (:7000)。継続コンパイルを別ターミナルで回すと保存時に自動再起動する
+# backend (:7001)。継続コンパイルを別ターミナルで回すと保存時に自動再起動する
 cd backend && ./gradlew bootRun --args='--spring.profiles.active=dev'
 cd backend && ./gradlew -t classes          # 別ターミナル
 
-# frontend (:7001)。/api を :7000 にプロキシ
+# frontend (:7000)。/api を :7001 にプロキシ
 cd frontend && npm install && npm run dev
 ```
 

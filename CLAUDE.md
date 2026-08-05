@@ -25,11 +25,16 @@ Dockerfile  frontend build → backend build → JRE のマルチステージ。
 
 ## 開発の回し方
 
+**ポートは開発と本番で入れ替わる。7000 は「人がブラウザで開くほう」**と決めてある ——
+開発では Vite(HMR が効くのはこちら)、本番では単一コンテナの Spring。
+そのぶん開発中の backend は 7001(`application-dev.yml`)。**本番コンテナと開発サーバーは
+同時に上げられない**(どちらも 7000 を取る)ので、片方を止めるか `PORT` で逃がす。
+
 ### バックエンド単体
 
 ```bash
 cd backend
-./gradlew bootRun --args='--spring.profiles.active=dev'   # :7000
+./gradlew bootRun --args='--spring.profiles.active=dev'   # :7001(dev だけ。本番は 7000)
 ./gradlew test
 ```
 
@@ -41,7 +46,7 @@ cd backend
 ```bash
 cd frontend
 npm install
-npm run dev       # :7001 → /api を :7000 にプロキシ
+npm run dev       # :7000 → /api を :7001 にプロキシ
 npm run build     # vue-tsc の型チェック込み
 ```
 
@@ -367,7 +372,7 @@ http と判断するしかなく、`redirect_uri` が http で組まれてログ
   バックエンド自身が返す 4xx/5xx の API エラーは従来どおり各画面のバナー。
   **認証確認(`/api/me`)が済むまで RouterView を描画しない**(未認証で描けるのは
   ログイン画面だけ)。詳細は `docs/詳細設計.md` §14
-- 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7001、dev は認証なし
+- 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7000、dev は認証なし
 - セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
 - 管理系エンドポイント(Actuator 等)は追加しない
 
@@ -399,11 +404,6 @@ http と判断するしかなく、`redirect_uri` が http で組まれてログ
 - `version` は**これ以下なら読む**で判定する。将来 2 を書き出すようになっても
   古い 1 のファイルを読めるようにするため
 - 貼られた文字列の JSON 解釈だけは画面側。壊れていればサーバーに行かず手元で弾く
-
-## ルール機能
-
-「全 Claude Code 環境に効かせたい決まりごと」を Markdown で複数持ち、**表示順に連結して
-1 本の Markdown として取り出す**ための機能(`dev.cctasks.rule`, `RulesView.vue`)。
 - **持ち出し方はコピーとファイルの 2 つ**(`lib/fileTransfer.ts`、`FileSaveButton.vue` /
   `FileLoadButton.vue`)。どちらも通る本文は同じ。スマホでは貼り付けが速く、PC では
   長い JSON をファイルで扱うほうが確実なので、どちらか一方に寄せない。
@@ -418,6 +418,11 @@ http と判断するしかなく、`redirect_uri` が http で組まれてログ
   どう扱うかは一度読めば済むので、常に出して本文の場所を取らせない
 - **読み込んだファイルは入力欄に流し込むだけで、取り込みは走らせない**。
   何が入るかを `dryRun` で見せてから実行する流れを、貼り付けたときと変えないため
+
+## ルール機能
+
+「全 Claude Code 環境に効かせたい決まりごと」を Markdown で複数持ち、**表示順に連結して
+1 本の Markdown として取り出す**ための機能(`dev.cctasks.rule`, `RulesView.vue`)。
 
 - 連結は **サーバー側**(`RuleService.combined()`)で行う。貼り付ける本文と
   `GET /api/rules/combined` が返す本文を常に一致させるため
