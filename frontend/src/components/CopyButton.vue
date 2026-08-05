@@ -37,8 +37,8 @@ async function copy() {
   <button
     v-if="icon"
     type="button"
-    class="icon"
-    :class="{ 'icon--done': copied }"
+    class="icon-button"
+    :class="{ 'icon-button--done': copied }"
     :aria-label="label ?? 'クリップボードにコピー'"
     :title="copied ? 'コピーしました' : (label ?? 'クリップボードにコピー')"
     @click.stop.prevent="copy"
@@ -78,27 +78,8 @@ async function copy() {
 </template>
 
 <style scoped>
-.icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.875rem;
-  height: 1.875rem;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.icon:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.icon--done {
+/* 枠と大きさは main.css の .icon-button(書き出し / 読み込みと共通)。ここは済み表示だけ */
+.icon-button--done {
   color: var(--badge-done-text);
   border-color: var(--badge-done-text);
 }

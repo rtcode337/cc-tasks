@@ -5,9 +5,11 @@ import { usePullToRefresh } from '@/lib/pullToRefresh'
 import { useDragSort } from '@/lib/dragSort'
 import { repoSlug } from '@/lib/claudeCode'
 import { backdropClose } from '@/lib/backdropClose'
+import { stampedName } from '@/lib/fileTransfer'
 import type { Rule } from '@/api/types'
 import ErrorBanner from '@/components/ErrorBanner.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import FileSaveButton from '@/components/FileSaveButton.vue'
 import RuleFormModal from '@/components/RuleFormModal.vue'
 import RuleImportModal from '@/components/RuleImportModal.vue'
 
@@ -218,7 +220,15 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
       <div class="modal__panel">
         <div class="modal__head">
           <h2 class="modal__title">まとめたルール</h2>
-          <CopyButton icon :text="combined" label="ルール全文をコピー" />
+          <div class="modal__tools">
+            <FileSaveButton
+              v-if="combined"
+              :text="combined"
+              :filename="stampedName('cc-tasks-rules', 'md')"
+              mime="text/markdown"
+            />
+            <CopyButton icon :text="combined" label="ルール全文をコピー" />
+          </div>
         </div>
         <p v-if="combined === ''" class="muted">有効なルールがありません。</p>
         <template v-else>
@@ -502,6 +512,13 @@ const sorter = useDragSort<Rule>(async (_key, ordered) => {
 .modal__title {
   margin: 0;
   font-size: 1rem;
+}
+
+/* 右上のアイコン(ファイルに書き出す → コピーの順)。見た目は main.css の .icon-button */
+.modal__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* 貼り先の説明。コピーした Markdown をどこへ置くか迷わないように */

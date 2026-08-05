@@ -144,3 +144,44 @@ textarea:focus {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* モーダル右上のアイコンボタン(コピー / ファイルに書き出す / ファイルから読み込む)。
+   横に並ぶので、どれか 1 つだけ見た目がずれないよう指定はここに 1 つだけ置く */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 文言で出す小さなボタン(ファイルに書き出す / ファイルから読み込む)。
+   アイコンだけでは何のファイル操作か分からないものは、こちらで文言のまま出す */
+.text-button {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.text-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}

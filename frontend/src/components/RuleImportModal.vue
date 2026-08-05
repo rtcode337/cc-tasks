@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRuleStore } from '@/stores/rules'
 import { backdropClose } from '@/lib/backdropClose'
 import ErrorBanner from '@/components/ErrorBanner.vue'
+import FileLoadButton from '@/components/FileLoadButton.vue'
 
 /**
  * まとめたルールの Markdown を貼り付けて一覧へ戻す(「まとめて表示」の逆)。
@@ -31,6 +32,13 @@ const canSubmit = computed(() => markdown.value.trim() !== '' && !busy.value)
 /** 本文か取り込み方を変えたら、確認済みの見出しは古くなるので破棄する */
 function invalidatePreview() {
   preview.value = null
+}
+
+/** 選ばれたファイルの中身を入力欄へ流し込む(取り込みは走らせない。貼ったときと同じ流れ) */
+function loadFile(text: string) {
+  markdown.value = text
+  error.value = null
+  invalidatePreview()
 }
 
 async function confirm() {
@@ -70,6 +78,11 @@ async function run() {
     <div class="modal__panel">
       <div class="modal__head">
         <h2 class="modal__title">ルールを取り込む</h2>
+        <FileLoadButton
+          accept=".md,.markdown,text/markdown,text/plain"
+          @load="loadFile"
+          @error="error = $event"
+        />
       </div>
 
       <ErrorBanner v-if="error" :message="error" />

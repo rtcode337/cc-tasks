@@ -56,8 +56,8 @@ function openEditProject(project: Project) {
 // タスクの編集はカードを押してモーダルで(専用画面は持たない)
 const editingTask = ref<Task | null>(null)
 
-// 未完了タスクの書き出し / 読み込み。null = 閉じている
-const transferMode = ref<'export' | 'import' | null>(null)
+// 未完了タスクのバックアップ(書き出し / 読み込み)。向きはモーダル内のタブで選ぶ
+const transferOpen = ref(false)
 
 function openEditTask(task: Task) {
   editingTask.value = task
@@ -115,7 +115,15 @@ async function save() {
     <section class="list">
       <h2 class="list__title">
         未完了 <span class="list__count">{{ tasks.active.length }}</span>
-        <button type="button" class="list__add" @click="openCreateProject">＋ プロジェクト</button>
+        <div class="list__actions">
+          <!-- 持ち出しと復元。向き(書き出し / 読み込み)はモーダル内のタブで選ぶ -->
+          <button type="button" class="list__action" @click="transferOpen = true">
+            バックアップ
+          </button>
+          <button type="button" class="list__action" @click="openCreateProject">
+            ＋ プロジェクト
+          </button>
+        </div>
       </h2>
 
       <!-- プロジェクトが未読込のあいだに出すと紐づき済みのタスクが消えて見えるので両方待つ -->
@@ -134,23 +142,6 @@ async function save() {
         <RouterLink to="/done" class="foot__link">完了したタスク →</RouterLink>
         <RouterLink to="/archived" class="foot__link">アーカイブしたプロジェクト →</RouterLink>
       </div>
-
-      <!-- 未完了タスクの持ち出しと復元。書き出したものをそのまま読み込める -->
-      <div class="backup">
-        <span class="backup__label">バックアップ</span>
-        <div class="backup__actions">
-          <button type="button" class="backup__button" @click="transferMode = 'export'">
-            書き出し
-          </button>
-          <button type="button" class="backup__button" @click="transferMode = 'import'">
-            読み込み
-          </button>
-        </div>
-        <p class="backup__hint">
-          未完了タスクをプロジェクト名・リポジトリ付きで書き出す。書き出した内容をそのまま
-          読み込めるので、テキストで保存しておけば別の環境にも移せる。
-        </p>
-      </div>
     </section>
 
     <ProjectFormModal
@@ -161,7 +152,7 @@ async function save() {
 
     <TaskFormModal v-if="editingTask" :task="editingTask" @close="editingTask = null" />
 
-    <TaskTransferModal v-if="transferMode" :mode="transferMode" @close="transferMode = null" />
+    <TaskTransferModal v-if="transferOpen" @close="transferOpen = false" />
   </section>
 </template>
 
@@ -192,6 +183,8 @@ async function save() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  /* ボタンが 3 つ並ぶので、狭い画面では下段へ折り返す */
+  flex-wrap: wrap;
   margin: 0 0 0.75rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -203,9 +196,15 @@ async function save() {
   color: var(--muted-dim);
 }
 
-/* 新規プロジェクトは見出しの右端から */
-.list__add {
+/* 書き出し・読み込み・新規プロジェクトは見出しの右端から */
+.list__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   margin-left: auto;
+}
+
+.list__action {
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -218,7 +217,7 @@ async function save() {
   white-space: nowrap;
 }
 
-.list__add:hover {
+.list__action:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
@@ -241,50 +240,6 @@ async function save() {
 
 .foot__link:hover {
   color: var(--accent);
-}
-
-/* バックアップ。一覧の下に区切って置く(ルール画面の規約リポジトリと同じ置き方) */
-.backup {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-.backup__label {
-  display: block;
-  margin-bottom: 0.375rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.backup__actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.backup__button {
-  padding: 0.375rem 0.875rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 0.8125rem;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.backup__button:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.backup__hint {
-  margin: 0.5rem 0 0;
-  font-size: 0.6875rem;
-  line-height: 1.6;
-  color: var(--muted-dim);
 }
 
 .muted {
