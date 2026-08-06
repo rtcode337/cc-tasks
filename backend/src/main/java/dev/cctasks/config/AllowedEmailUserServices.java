@@ -33,7 +33,7 @@ final class AllowedEmailUserServices {
         OidcUserService delegate = new OidcUserService();
         return request -> {
             OidcUser user = delegate.loadUser(request);
-            check(allowedEmail, user.getEmail());
+            check(allowedEmail, user.getEmail(), user.getEmailVerified());
             return user;
         };
     }
@@ -42,12 +42,18 @@ final class AllowedEmailUserServices {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
         return request -> {
             OAuth2User user = delegate.loadUser(request);
-            check(allowedEmail, user.getAttribute("email"));
+            check(allowedEmail, user.getAttribute("email"), user.getAttribute("email_verified"));
             return user;
         };
     }
 
-    private static void check(String allowedEmail, String email) {
+    /**
+     * メールアドレスの一致に加えて、IdP が検証済みと言っているかも見る。
+     * メールだけで人を同定する設計なので、未検証のアドレスを受け入れると
+     * 「他人のアドレスを名乗るアカウント」でログインできてしまう(OIDC の定石)。
+     * email_verified が欠けている場合は検証済みと見なさない。
+     */
+    private static void check(String allowedEmail, String email, Object emailVerified) {
         if (!StringUtils.hasText(allowedEmail)) {
             log.error("ALLOWED_EMAIL が未設定のためログインを拒否しました");
             throw denied();
@@ -56,6 +62,19 @@ final class AllowedEmailUserServices {
             log.warn("許可されていないアカウントのログインを拒否しました");
             throw denied();
         }
+        if (!isVerified(emailVerified)) {
+            log.warn("メールアドレスが検証済みでないアカウントのログインを拒否しました");
+            throw denied();
+        }
+    }
+
+    /** email_verified は IdP により boolean と文字列("true")の両方がありうる。 */
+    private static boolean isVerified(Object emailVerified) {
+        return switch (emailVerified) {
+            case Boolean b -> b;
+            case String s -> Boolean.parseBoolean(s);
+            case null, default -> false;
+        };
     }
 
     private static OAuth2AuthenticationException denied() {

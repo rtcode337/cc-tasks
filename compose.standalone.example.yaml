@@ -23,6 +23,10 @@ x-settings: &settings
   # 公開 URL。手前のプロキシが X-Forwarded-Proto を送らない環境では **必須**。
   # 未設定だと redirect_uri が http で組まれ、https 公開なのにログインできない
   PUBLIC_BASE_URL: "https://cctasks.example.com"
+  # PUBLIC_BASE_URL を空にして Host/X-Forwarded-Host から導出させる場合に必須。
+  # ここに載せたホストでしか redirect_uri を組み立てない(ヘッダは詐称できるため)。
+  # ポート込み・カンマ区切り
+  ALLOWED_REDIRECT_HOSTS: ""
   # 表示・ログのタイムゾーン
   TZ: "Asia/Tokyo"
   # SQLite の位置 (コンテナ内)。通常は変更不要

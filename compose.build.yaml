@@ -32,6 +32,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET を .env に設定してください}
       ALLOWED_EMAIL: ${ALLOWED_EMAIL:?ログインを許可するメールアドレスを .env に設定してください}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # PUBLIC_BASE_URL を使わず Host/X-Forwarded-Host から導出させる場合に必須。
+      # ここに載せたホストでしか redirect_uri を組み立てない(ヘッダは詐称できるため)
+      ALLOWED_REDIRECT_HOSTS: ${ALLOWED_REDIRECT_HOSTS:-}
       DB_PATH: /data/cctasks.db
       TZ: ${TZ:-Asia/Tokyo}
     volumes:

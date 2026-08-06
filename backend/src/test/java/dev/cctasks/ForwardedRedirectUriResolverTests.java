@@ -1,5 +1,7 @@
 package dev.cctasks;
 
+import java.util.List;
+
 import dev.cctasks.config.ForwardedRedirectUriResolver;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ForwardedRedirectUriResolverTests {
 
+    /** redirect_uri の組み立てを許可するホスト (本番では CCTASKS_ALLOWED_REDIRECT_HOSTS)。 */
+    private static final List<String> ALLOWED_HOSTS =
+            List.of("cctasks.example.com:8443", "cctasks.example.com");
+
     private final ClientRegistrationRepository repository = new InMemoryClientRegistrationRepository(
             ClientRegistration.withRegistrationId("google")
                     .clientId("client-id")
@@ -32,7 +38,7 @@ class ForwardedRedirectUriResolverTests {
 
     @Test
     void X_Forwarded_Host_のポートを保持して_redirect_uri_を組む() {
-        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
 
         OAuth2AuthorizationRequest result = resolver.resolve(authorizeRequest(
                 "https", "cctasks.example.com:8443"));
@@ -49,7 +55,7 @@ class ForwardedRedirectUriResolverTests {
     void X_Forwarded_Host_が無ければ_Host_ヘッダのポートを使う() {
         // 実際に遭遇したリバースプロキシの挙動: X-Forwarded-Host は送らず、
         // Host: cctasks.example.com:8443 と X-Forwarded-Proto: https だけを送ってくる。
-        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/google");
         request.addHeader("X-Forwarded-Proto", "https");
@@ -64,7 +70,7 @@ class ForwardedRedirectUriResolverTests {
 
     @Test
     void 標準ポートならポート表記なしの_origin_になる() {
-        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
 
         OAuth2AuthorizationRequest result = resolver.resolve(authorizeRequest(
                 "https", "cctasks.example.com"));
@@ -76,7 +82,7 @@ class ForwardedRedirectUriResolverTests {
     @Test
     void PUBLIC_BASE_URL_設定時は書き換えない() {
         // publicBaseUrlConfigured=true。テンプレートが絶対 URL 前提なので {baseUrl} 展開のまま。
-        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, true);
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, true, ALLOWED_HOSTS);
 
         OAuth2AuthorizationRequest result = resolver.resolve(authorizeRequest(
                 "https", "cctasks.example.com:8443"));
@@ -86,13 +92,15 @@ class ForwardedRedirectUriResolverTests {
     }
 
     @Test
-    void 転送ヘッダが無ければ既定の展開に委ねる() {
-        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false);
+    void 転送ヘッダが無くても許可リスト内の値になる() {
+        // MockHttpServletRequest の既定ホストは localhost = 許可リスト外なので先頭へ倒れる
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/google");
         OAuth2AuthorizationRequest result = resolver.resolve(request);
 
-        assertThat(result.getRedirectUri()).isEqualTo("http://localhost/login/oauth2/code/google");
+        assertThat(result.getRedirectUri())
+                .isEqualTo("https://cctasks.example.com:8443/login/oauth2/code/google");
     }
 
     private static MockHttpServletRequest authorizeRequest(String forwardedProto, String forwardedHost) {
@@ -100,5 +108,41 @@ class ForwardedRedirectUriResolverTests {
         request.addHeader("X-Forwarded-Proto", forwardedProto);
         request.addHeader("X-Forwarded-Host", forwardedHost);
         return request;
+    }
+
+    @Test
+    void 許可リストに無いホストは許可リスト先頭へ強制される() {
+        // Host ヘッダ注入対策。delegate が展開する {baseUrl} 自体が攻撃者のホストに
+        // なりうる(RemoteIpValve と Spring が先に Host/X-Forwarded-Host を反映する)ため、
+        // 「書き換えない」ではなく許可リスト内の値へ強制する。
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
+
+        OAuth2AuthorizationRequest result = resolver.resolve(authorizeRequest("https", "evil.example"));
+
+        assertThat(result.getRedirectUri())
+                .isEqualTo("https://cctasks.example.com:8443/login/oauth2/code/google");
+    }
+
+    @Test
+    void Host_ヘッダだけを詐称しても強制される() {
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, ALLOWED_HOSTS);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/oauth2/authorization/google");
+        request.addHeader("X-Forwarded-Proto", "https");
+        request.addHeader("Host", "evil.example");
+
+        OAuth2AuthorizationRequest result = resolver.resolve(request);
+
+        assertThat(result.getRedirectUri())
+                .isEqualTo("https://cctasks.example.com:8443/login/oauth2/code/google");
+    }
+
+    @Test
+    void 許可リストが空なら書き換えない() {
+        ForwardedRedirectUriResolver resolver = new ForwardedRedirectUriResolver(repository, false, List.of());
+
+        OAuth2AuthorizationRequest result = resolver.resolve(authorizeRequest("https", "cctasks.example.com:8443"));
+
+        assertThat(result.getRedirectUri()).isEqualTo("http://localhost/login/oauth2/code/google");
     }
 }

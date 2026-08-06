@@ -193,6 +193,12 @@ Spring Boot の検証で起動が落ちる。そのため `GoogleOAuthEnvironmen
 スキーム=`X-Forwarded-Proto`、ホスト=`X-Forwarded-Host`(あれば)→無ければ `Host` ヘッダ。
 `Host` はポートを保持しているのでポートが残る。
 `PUBLIC_BASE_URL` を明示設定したときはテンプレートが絶対 URL なので書き換えは無効。
+
+**この自動導出には `ALLOWED_REDIRECT_HOSTS` が要る**(ポート込み・カンマ区切り)。
+ホストはリクエストヘッダ由来＝攻撃者が自由に付けられるので、許可リストに載っている
+ホストでしか書き換えない(Host ヘッダ注入対策)。**`PUBLIC_BASE_URL` も
+`ALLOWED_REDIRECT_HOSTS` も未設定だと自動導出は働かず**、上の「ポートが落ちる」
+問題がそのまま出る(起動時に WARN を出す)。どちらか一方は必ず設定すること。
 **Google Console の「承認済みリダイレクト URI」にはポート込みで登録が必要**
 (例 `https://cctasks.example.com:8443/login/oauth2/code/google`)。
 セッション Cookie の `Secure` は `application.yml` で **あえて指定していない** ——
@@ -210,6 +216,12 @@ http と判断するしかなく、`redirect_uri` が http で組まれてログ
 ログインのレート制限は `OAuth2AuthorizationRequestRedirectFilter` の **手前** に入れる必要がある。
 `UsernamePasswordAuthenticationFilter` の手前だと、認可リクエストのリダイレクトの方が
 先に起きて素通りする。
+
+**バケットのキーに `X-Forwarded-For` を使ってはいけない。** ヘッダは攻撃者が自由に付けられ、
+プロキシは消さずに後ろへ追記する(`偽装値, 本物のIP`)ので、先頭を採ると毎リクエスト別バケットに
+なり制限が丸ごと無効化される(実測: XFF を変えながら 30 連打で 429 が 0 回)。
+`request.getRemoteAddr()` を使う —— `forward-headers-strategy: native` の `RemoteIpValve` が
+信頼できるプロキシを判定したうえで入れた値なので詐称できない。
 
 ## 規約
 

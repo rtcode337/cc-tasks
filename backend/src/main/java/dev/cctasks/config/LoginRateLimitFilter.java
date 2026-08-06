@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.http.MediaType;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -33,7 +32,13 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        if (!rateLimiter.tryConsume("login:" + clientIp(request))) {
+        // キーは request.getRemoteAddr()。X-Forwarded-For を自分で読んではいけない ——
+        // ヘッダは攻撃者が自由に付けられ、プロキシは消さずに後ろへ追記する
+        // (`偽装値, 本物のIP`)ため、先頭を採ると毎リクエスト別バケットになり
+        // 制限が丸ごと無効化される(実測: XFF を変えながら30連打で 429 が 0 回)。
+        // getRemoteAddr() は forward-headers-strategy: native の RemoteIpValve が
+        // 信頼できるプロキシを判定した上で入れた値なので、詐称できない。
+        if (!rateLimiter.tryConsume("login:" + request.getRemoteAddr())) {
             response.setStatus(429);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -44,11 +49,4 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private static String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded)) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
 }

@@ -99,9 +99,17 @@ public class SecurityConfig {
 
         // リダイレクト URI のポートは X-Forwarded-Host(ポート込み)から保持する。
         // PUBLIC_BASE_URL 設定時はテンプレートが絶対 URL なので書き換えは無効化される。
+        // ヘッダ由来のホストは ALLOWED_REDIRECT_HOSTS の許可リストでのみ採用する。
+        if (!StringUtils.hasText(properties.publicBaseUrl()) && properties.allowedRedirectHosts().isEmpty()) {
+            log.warn("PUBLIC_BASE_URL も ALLOWED_REDIRECT_HOSTS も未設定です。"
+                    + " リダイレクト URI はリクエストからの自動導出を行わず {baseUrl} 展開のみになります"
+                    + "(非標準ポートやリバースプロキシ配下ではログインに失敗する可能性があります)。"
+                    + " どちらかを設定してください");
+        }
         ForwardedRedirectUriResolver redirectUriResolver = new ForwardedRedirectUriResolver(
                 clientRegistrations.getIfAvailable(),
-                StringUtils.hasText(properties.publicBaseUrl()));
+                StringUtils.hasText(properties.publicBaseUrl()),
+                properties.allowedRedirectHosts());
 
         return http
                 .oauth2Login(oauth -> oauth

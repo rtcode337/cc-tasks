@@ -74,6 +74,10 @@ cctasks:
   allowed-email: ${ALLOWED_EMAIL:}
   # 公開 URL。OAuth リダイレクト構築に使う (リバースプロキシ配下での絶対 URL)
   public-base-url: ${PUBLIC_BASE_URL:}
+  # redirect_uri を Host / X-Forwarded-Host から組み立ててよいホスト (ポート込み・カンマ区切り)。
+  # ヘッダは攻撃者が自由に付けられるため、載っているホストでしか書き換えない。
+  # 未設定なら書き換え自体を行わない (PUBLIC_BASE_URL か Spring 既定の {baseUrl} 展開に委ねる)
+  allowed-redirect-hosts: ${ALLOWED_REDIRECT_HOSTS:}
   rate-limit:
     # 認証系エンドポイントに対する IP あたりの毎分許容リクエスト数
     requests-per-minute: 20

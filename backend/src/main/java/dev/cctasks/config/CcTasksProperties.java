@@ -1,5 +1,7 @@
 package dev.cctasks.config;
 
+import java.util.List;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -11,10 +13,17 @@ public record CcTasksProperties(
         String allowedEmail,
         /** 公開 URL (OAuth リダイレクト構築用)。 */
         String publicBaseUrl,
+        /**
+         * redirect_uri の組み立てに使ってよいホスト (ポート込み。カンマ区切りで複数)。
+         * 未設定なら Host / X-Forwarded-Host からの導出を行わない
+         * ({@code publicBaseUrl} か Spring 既定の {@code {baseUrl}} に委ねる)。
+         */
+        List<String> allowedRedirectHosts,
         RateLimit rateLimit) {
 
     public CcTasksProperties {
         rateLimit = rateLimit != null ? rateLimit : new RateLimit(20);
+        allowedRedirectHosts = allowedRedirectHosts != null ? List.copyOf(allowedRedirectHosts) : List.of();
     }
 
     public record RateLimit(int requestsPerMinute) {

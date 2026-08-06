@@ -39,7 +39,11 @@ public class SpaWebConfig implements WebMvcConfigurer {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
                         Resource requested = location.createRelative(resourcePath);
-                        if (requested.exists() && requested.isReadable()) {
+                        // checkResource() は「解決先が location 配下か」を確かめる親クラスの検査。
+                        // 上流(ResourceHttpRequestHandler)も ../ を弾くが、ここを飛ばすと
+                        // このクラス自身は何も守らないことになる(配信元を classpath から
+                        // ファイルシステムへ変えた瞬間に任意ファイル読み出しになる)
+                        if (requested.exists() && requested.isReadable() && checkResource(requested, location)) {
                             return requested;
                         }
                         if (resourcePath.startsWith("api/")) {

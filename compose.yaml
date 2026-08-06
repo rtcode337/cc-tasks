@@ -39,6 +39,9 @@ services:
       # 任意。サーバーの OAuth は未設定でもリクエスト(X-Forwarded-Proto/Host)から
       # リダイレクトを自動導出する。プロキシがそれらを送らない/固定したい場合のみ設定。
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # PUBLIC_BASE_URL を使わず Host/X-Forwarded-Host から導出させる場合に必須。
+      # ここに載せたホストでしか redirect_uri を組み立てない(ヘッダは詐称できるため)
+      ALLOWED_REDIRECT_HOSTS: ${ALLOWED_REDIRECT_HOSTS:-}
       DB_PATH: /data/cctasks.db
       # 表示・ログのタイムゾーン。既定は日本時間、必要なら .env の TZ で変えられる
       TZ: ${TZ:-Asia/Tokyo}
