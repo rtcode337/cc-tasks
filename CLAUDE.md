@@ -161,6 +161,10 @@ DDL は `backend/src/main/resources/schema.sql`。起動のたびに `CREATE TAB
 ただしこれは新規 DB にしか効かないため、**列を足すときは schema.sql と `SchemaMigrations`
 (起動時に冪等な ALTER を当てる)の両方を直す**(マイグレーションツールは入れていない)。
 
+**テーブル定義の最終形は [docs/データベース定義.md](docs/データベース定義.md)**(列・型・意味・
+索引・ER 図・クラス図)。schema.sql / `SchemaMigrations` / エンティティのいずれかを触ったら、
+同じコミットでこの文書も更新する —— DDL とマイグレーションを往復しないと最終形が読めなくなるため。
+
 再起動後の最初の書き込みが極端に遅くなる問題への対策が 2 つ入っている。
 JDBC URL の `synchronous=NORMAL`(WAL ではコミット毎の fsync 不要。遅いディスクの書き込み待ちの回避)と、
 `WriteWarmup`(起動時に INSERT + DELETE を 1 コミットして、書き込み経路の JIT とディスクの
