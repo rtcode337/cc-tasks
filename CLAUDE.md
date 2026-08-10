@@ -405,7 +405,10 @@ http と判断するしかなく、`redirect_uri` が http で組まれてログ
   **認証確認(`/api/me`)が済むまで RouterView を描画しない**(未認証で描けるのは
   ログイン画面だけ)。詳細は `docs/詳細設計.md` §14
 - 開発時は `spring-boot-devtools` で自動再起動(bootJar には入らず本番では無効)。反復は `./dev.sh`(backend dev + 継続コンパイル + Vite HMR)で回す。開くのは :7000、dev は認証なし
-- セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d
+- セッションはディスク永続化(`server.servlet.session.persistent`、store-dir は `SESSION_DIR`=`/data/sessions`)。再起動・再デプロイでも再ログイン不要。timeout は 30d。
+  **Cookie にも `max-age: 30d` を明示する** —— 無指定だとブラウザセッション Cookie に
+  なり、モバイル OS が PWA のプロセスを回収してしばらく経つとブラウザが Cookie を捨て、
+  サーバーのセッションが生きていてもログインし直しになる(実際に起きた)
 - 管理系エンドポイント(Actuator 等)は追加しない
 
 ## タスクのバックアップ(書き出し / 読み込み)

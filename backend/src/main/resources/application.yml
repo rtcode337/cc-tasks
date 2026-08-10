@@ -63,6 +63,11 @@ server:
         name: CCTASKSSESSION
         http-only: true
         same-site: lax
+        # timeout と揃えた永続 Cookie にする。max-age 無しの「ブラウザセッション
+        # Cookie」だと、モバイル OS が PWA のプロセスを回収してしばらく経った時点で
+        # ブラウザ側が Cookie を破棄し、サーバーのセッションが生きていても
+        # ログインし直しになる(タスク切り替えのたびにログイン画面に戻る症状の原因)
+        max-age: 30d
         # secure はあえて指定しない。未指定だと Tomcat がリクエストのスキーマ
         # (ForwardedHeaderFilter 適用後の isSecure) を見て自動で付ける。
         # → https 本番では Secure、http ローカルでは非 Secure になり、
