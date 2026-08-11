@@ -79,10 +79,12 @@ async function remove() {
       <label class="field">
         <span class="field__label">プロジェクト</span>
         <select v-model="form.projectId">
-          <option :value="null">プロジェクトなし</option>
+          <!-- 並びはトップの入力欄と同じ(「プロジェクトなし」は末尾)。
+               既定はそのタスクの今のプロジェクトなので、こちらは先頭を選ばない -->
           <option v-for="project in projects.active" :key="project.id" :value="project.id">
             {{ project.name }}
           </option>
+          <option :value="null">プロジェクトなし</option>
         </select>
       </label>
 

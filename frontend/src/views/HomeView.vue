@@ -34,7 +34,7 @@ const projectGroups = computed(() =>
 
 const error = ref<string | null>(null)
 const memo = ref('')
-// null = プロジェクトに紐づけない
+// null = プロジェクトに紐づけない。読み込みが済んだら先頭のプロジェクトを既定にする
 const projectId = ref<number | null>(null)
 const saving = ref(false)
 
@@ -66,6 +66,11 @@ function openEditTask(task: Task) {
 onMounted(async () => {
   try {
     await Promise.all([projects.load(), tasks.load()])
+    // 既定は一覧の先頭のプロジェクト(選択肢の並びと同じく「プロジェクトなし」は末尾)。
+    // ほとんどのタスクはどれかのプロジェクトに属するので、毎回選ばせない。
+    // 決めるのは初回の読み込みのときだけ —— 引っ張って更新するたびに
+    // 選び直したプロジェクトが先頭へ戻ると、続けて入力しているあいだ邪魔になる
+    projectId.value = projects.active[0]?.id ?? null
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e)
   }
@@ -102,8 +107,9 @@ async function save() {
       />
       <div class="entry__actions">
         <select v-model="projectId" class="entry__project" aria-label="プロジェクト">
-          <option :value="null">プロジェクトなし</option>
+          <!-- 「プロジェクトなし」は末尾。先頭はよく使うプロジェクトの席にする -->
           <option v-for="p in projects.active" :key="p.id" :value="p.id">{{ p.name }}</option>
+          <option :value="null">プロジェクトなし</option>
         </select>
         <button type="submit" class="button entry__save" :disabled="!memo.trim() || saving">
           {{ saving ? '保存中…' : '保存' }}
