@@ -129,6 +129,7 @@ docker compose pull && docker compose up -d
 
 - `compose.yaml` は `127.0.0.1:7000` にだけ公開する。HTTPS 終端と外部公開は手前のリバースプロキシの責務
 - タグは `latest` と `sha-xxxxxxx`。切り戻しは `CCTASKS_IMAGE=ghcr.io/rtcode337/cc-tasks:sha-xxxxxxx docker compose up -d`
+  （GHCR に残るのは**直近 10 世代**。それより古い版は push のたびに掃除される）
 - データ(SQLite・セッション)は**リポジトリ直下の `data/`** に残るので、pull・再作成しても消えない。
   **バックアップ・別マシンへの移行はこのフォルダごとコピーすればよい**(停止してからコピーすること)
 - `data/` に書き込むユーザーは既定で `1000:1000`。`id -u` が 1000 以外のホストでは

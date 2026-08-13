@@ -104,7 +104,8 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           # latest(既定ブランチのみ)+ コミット SHA(sha-xxxxxxx)の 2 タグ。
-          # 障害時は SHA タグを指定して pull すれば任意の時点に戻せる。
+          # 障害時は SHA タグを指定して pull すれば戻せる(**残るのは直近 10 世代**。
+          # それより古い版は下の掃除で消える)。
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
@@ -118,3 +119,21 @@ jobs:
 
       - name: Inspect
         run: docker buildx imagetools inspect ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+
+      # 古い版を消して直近 10 世代だけ残す。
+      #
+      # 公開パッケージなので GHCR の容量・転送は無料枠を消費しないが、版は放っておくと
+      # 際限なく積み上がる(`latest` を付け替えても前の版は SHA タグ付きで残る)。
+      # 一覧が読めなくなるのと、どれが生きているか分からなくなるのを防ぐための掃除。
+      #
+      # **actions/delete-package-versions は使わない。** このリポジトリはマルチアーキで、
+      # 1 つのタグが manifest list ＋ アーキごとの子イメージで構成される。あちらは
+      # 子イメージを「タグ無しの版」として消してしまい、残したはずのタグが壊れる。
+      # この action は manifest list を理解して親子まとめて扱う。
+      - name: 古いイメージを削除して直近 10 世代だけ残す
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          packages: cc-tasks
+          keep-n-tagged: 10
+          delete-untagged: true
+          token: ${{ secrets.GITHUB_TOKEN }}
