@@ -29,8 +29,6 @@ x-settings: &settings
   ALLOWED_REDIRECT_HOSTS: ""
   # 表示・ログのタイムゾーン
   TZ: "Asia/Tokyo"
-  # SQLite の位置 (コンテナ内)。通常は変更不要
-  DB_PATH: "/data/cctasks.db"
   # 任意。JVM のヒープ上限。既定 (Dockerfile) は -XX:MaxRAMPercentage=70 で、
   # コンテナのメモリ上限に追従する。mem_limit を指定できない環境では上限が
   # ホストの搭載量基準になるため、抑えたいならここで直接決める。
@@ -74,7 +72,11 @@ services:
       # プロキシからのみ届けばよいのでループバックに閉じる。
       # 同一ホストのプロキシから届かない構成なら "7000:7000" にする
       - "127.0.0.1:7000:7000"
-    environment: *settings
+    environment:
+      <<: *settings
+      # SQLite の位置 (コンテナ内)。イメージの既定と同じ値なので触らなくてよい。
+      # DB の実体がどこに出るかを YAML だけで読めるよう明示してある
+      DB_PATH: "/data/cctasks.db"
     volumes:
       - *data-volume
     user: *run-as
