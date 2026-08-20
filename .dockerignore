@@ -2,7 +2,10 @@
 **/dist
 **/build
 **/.gradle
+# SQLite とセッションの置き場。イメージには要らないうえ、本番ホストで
+# compose.build.yaml を使うと DB 本体がビルドコンテキストに乗る
 backend/data
+data
 backend/src/main/resources/static
 .git
 docs

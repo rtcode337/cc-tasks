@@ -12,10 +12,10 @@ backend/data/
 *.db-wal
 *.db-shm
 
-# Docker のデータ置き場(SQLite とセッション)。
-# 中身は追跡しないが、ディレクトリ自体は残す(バックアップ先として分かりやすいように)
-data/*
-!data/.gitkeep
+# Docker のデータ置き場(SQLite とセッション)。ディレクトリごと追跡しない ──
+# 無い状態で up しても Docker が作り、cctasks-init が所有者を揃えるので、
+# 空の置き場を配る必要がない(バックアップ先の説明は README と CLAUDE.md にある)
+data/
 
 # 秘密情報
 .env
